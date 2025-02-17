@@ -17,12 +17,12 @@
 
 ## Project Information
 
-|   Info      |        Description     |
-| ----------- | ---------------------- |
-|  Title      |       ProjectTitle     |
-| System URL  |      link_to_system    |
-| Video Link  |      link_to_video     |
+|   Info      |                 Description                |
+| ----------- | ------------------------------------------ |
+|  Title      | Natural Disasters and their Economic Impact|
+| System URL  |                link_to_system              |
+| Video Link  |                link_to_video               |
 
 ## Project Summary
 
-This is a summary of the project!
+This project aims to analyse the relationship between natural disasters and economic indicators. The platform we intend to create will allow its users to explore how various types of disasters affect economic factors such as GDP, inflation, unemployment, and housing prices over time. Through leveraging real-world data sources, this platform will provide visualisations, hence giving policymakers, researchers, and other curious parties insight into the connection between natural disasters and economic trends.
