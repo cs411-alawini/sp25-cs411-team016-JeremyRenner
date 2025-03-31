@@ -1,6 +1,6 @@
 import pandas as pd
 
-cols = ["Country Name", "Country Code", "Indicator Name", "Indicator Code"] + [str(year) for year in range(1960, 2024)]
+# cols = ["Country Name", "Country Code", "Indicator Name", "Indicator Code"] + [str(year) for year in range(1960, 2024)]
 
 def parse_tl_csv(filepath): # timeline csv
     df = pd.read_csv(filepath)
