@@ -111,7 +111,7 @@ def compare_data_aggregated():
         cursor = connection.cursor(dictionary=True)
 
         call_query = f"""
-            CALL CompareMultiCountryStatsRangeAggregate(
+            CALL CompareCountryStats(
                 '{country_str}',
                 '{indicator_str}',
                 {start_year},
@@ -123,14 +123,29 @@ def compare_data_aggregated():
         cursor.execute(call_query)
 
         results = []
+        fetched_countries = set()
         while True:
             try:
                 result = cursor.fetchall()
-                results.extend(result)
+                for row in result:
+                    results.append(row)
+                    fetched_countries.add(row['CountryName'])
                 if not cursor.nextset():
                     break
             except mysql.connector.errors.InterfaceError:
                 break
+
+        # Add "N/A" entries for missing countries
+        for c in countries:
+            if c not in fetched_countries:
+                na_row = {"CountryName": c}
+                for key in indicators:
+                    # Extract alias name after AS (or use full if no alias)
+                    alias = key.split("AS")[-1].strip() if "AS" in key else key.split('.')[-1]
+                    na_row[alias] = "N/A"
+                na_row["TotalDisasters"] = "N/A"
+                na_row["TotalDeaths"] = "N/A"
+                results.append(na_row)
 
         return jsonify(results)
 
