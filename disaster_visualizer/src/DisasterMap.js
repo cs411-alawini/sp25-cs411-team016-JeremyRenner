@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Box, Tooltip, Container, CircularProgress } from '@mui/material';
+import { Typography, Box, Tooltip, Container, CircularProgress, Button, AppBar, Toolbar } from '@mui/material';
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps';
 import { useNavigate } from 'react-router-dom';
 import { TextField, Autocomplete } from '@mui/material';
-
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -14,16 +13,14 @@ export default function DisasterMap() {
   const [highlightedCountry, setHighlightedCountry] = useState(null);
   const [countryOptions, setCountryOptions] = useState([]);
 
-  
-  // Simulate loading data
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
       fetch(geoUrl)
         .then(res => res.json())
         .then(data => {
-            const countries = data.objects.countries.geometries.map(g => g.properties.name || g.properties.NAME);
-            setCountryOptions(countries.sort());
+          const countries = data.objects.countries.geometries.map(g => g.properties.name || g.properties.NAME);
+          setCountryOptions(countries.sort());
         });
     }, 1500);
     return () => clearTimeout(timer);
@@ -51,6 +48,12 @@ export default function DisasterMap() {
     setPosition(position);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    navigate('/auth');
+  };
+
   return (
     <Box
       sx={{
@@ -61,12 +64,22 @@ export default function DisasterMap() {
         flexDirection: 'column',
         alignItems: 'center',
         px: { xs: 2, md: 4 },
-        py: { xs: 6, md: 8 },
+        pt: '64px',
         gap: 4,
         position: 'relative',
         overflow: 'hidden'
       }}
     >
+      {/* Navbar */}
+      <AppBar position="fixed" sx={{ background: 'rgba(8, 24, 40, 0.85)', boxShadow: 'none', zIndex: 10 }}>
+        <Toolbar sx={{ justifyContent: 'center', gap: 2 }}>
+          <Button onClick={() => navigate('/compare')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>Compare</Button>
+          <Button onClick={() => navigate('/saved')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>Saved Graphs</Button>
+          <Button onClick={() => navigate('/global')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>Global Stats</Button>
+          <Button onClick={handleLogout} variant="outlined" sx={{ color: '#ef9a9a', borderColor: '#ef9a9a' }}>Sign Out</Button>
+        </Toolbar>
+      </AppBar>
+
       {/* Animated background elements */}
       <Box sx={{
         position: 'absolute',

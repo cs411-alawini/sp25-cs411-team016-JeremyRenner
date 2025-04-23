@@ -2,9 +2,96 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import mysql.connector
 from collections import defaultdict
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager, create_access_token
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
 
 app = Flask(__name__)
 CORS(app)
+
+bcrypt = Bcrypt(app)
+app.config["JWT_SECRET_KEY"] = "super-secret-key"  # change this!
+jwt = JWTManager(app)
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    data = request.json
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
+
+    if not all([username, email, password]):
+        return jsonify({"error": "All fields required"}), 400
+
+    password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO Users (Username, Email, PasswordHash) VALUES (%s, %s, %s)",
+            (username, email, password_hash)
+        )
+        connection.commit()
+        return jsonify({"message": "User created!"}), 201
+
+    except mysql.connector.errors.IntegrityError:
+        return jsonify({"error": "Email or username already exists"}), 409
+
+    except mysql.connector.Error as err:
+        return jsonify({"error": str(err)}), 500
+
+    finally:
+        try:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+        except NameError:
+            pass  # connection wasn't established
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    email = data.get("email")
+    password = data.get("password")
+
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Users WHERE Email = %s", (email,))
+        user = cursor.fetchone()
+
+        if user and bcrypt.check_password_hash(user["PasswordHash"], password):
+            token = create_access_token(identity=user["UserID"])
+            return jsonify({"token": token, "username": user["Username"]})
+        else:
+            return jsonify({"error": "Invalid credentials"}), 401
+
+    except mysql.connector.Error as err:
+        return jsonify({"error": str(err)}), 500
+
+    finally:
+        try:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+        except NameError:
+            pass
+
 
 def get_country_profile_data(country):
     try:

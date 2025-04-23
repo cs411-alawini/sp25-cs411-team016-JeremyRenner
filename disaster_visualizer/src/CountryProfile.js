@@ -8,16 +8,18 @@ import {
   LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip as ChartTooltip, Legend, ResponsiveContainer
 } from 'recharts';
+import { useAuth } from './AuthContext.js';
 
 export default function CountryProfile() {
   const { countryName } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { token } = useAuth();
 
   useEffect(() => {
     fetch('http://127.0.0.1:5000/country_data', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ country: countryName })
     })
       .then(res => res.json())
