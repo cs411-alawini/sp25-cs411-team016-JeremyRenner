@@ -11,8 +11,8 @@ export default function DisasterMap() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [position, setPosition] = useState({ coordinates: [0, 20], zoom: 1 });
-  const [highlightedCountry, setHighlightedCountry] = useState(null);
-  const [countryOptions, setCountryOptions] = useState([]);
+  const [highlightedCountries, setHighlightedCountries] = useState([]);
+    const [countryOptions, setCountryOptions] = useState([]);
 
   
   // Simulate loading data
@@ -146,37 +146,54 @@ export default function DisasterMap() {
           Explore disaster statistics and their impact on global development and economic stability.
           Click on any country to view detailed information and historical trends.
         </Typography>
-        <Box sx={{ mb: 4, zIndex: 3, width: '100%', maxWidth: '500px', mx: 'auto' }}>
-            <Autocomplete
-                freeSolo
-                options={countryOptions}
-                onChange={(event, value) => setHighlightedCountry(value)}
-                renderInput={(params) => (
+        <Box sx={{ mb: 4, zIndex: 3, width: '100%', maxWidth: '600px', mx: 'auto' }}>
+        <Autocomplete
+            multiple
+            freeSolo
+            options={countryOptions}
+            value={highlightedCountries}
+            onChange={(event, newValue) => setHighlightedCountries(newValue)}
+            ChipProps={{
+                sx: {
+                color: 'white',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid #90caf9',
+                '& .MuiChip-deleteIcon': {
+                    color: 'white',
+                    '&:hover': {
+                    color: '#ff1744'
+                    }
+                }
+                }
+            }}
+            renderInput={(params) => (
                 <TextField
-                    {...params}
-                    label="Search for a country"
-                    variant="outlined"
-                    sx={{
+                {...params}
+                label="Search and highlight countries"
+                variant="outlined"
+                sx={{
                     input: { color: 'white' },
                     '& label': { color: 'white' },
                     '& .MuiOutlinedInput-root': {
-                        '& fieldset': {
+                    '& fieldset': {
                         borderColor: '#90caf9',
-                        },
-                        '&:hover fieldset': {
+                    },
+                    '&:hover fieldset': {
                         borderColor: '#64b5f6',
-                        },
-                        '&.Mui-focused fieldset': {
+                    },
+                    '&.Mui-focused fieldset': {
                         borderColor: '#2196f3',
-                        },
+                    },
                     },
                     backgroundColor: 'rgba(255, 255, 255, 0.05)',
                     borderRadius: 2,
-                    }}
+                }}
                 />
-                )}
+            )}
             />
-            </Box>
+
+        </Box>
+
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', my: 12 }}>
             <CircularProgress size={60} sx={{ color: '#82b1ff' }} />
@@ -277,6 +294,7 @@ export default function DisasterMap() {
                   {({ geographies }) =>
                     geographies.map((geo) => {
                       const country = geo.properties.NAME || geo.properties.name;
+                      const isHighlighted = highlightedCountries.includes(country);
                       
                       return (
                         <Tooltip 
@@ -293,26 +311,26 @@ export default function DisasterMap() {
                             onClick={() => handleCountryClick(country)}
                             style={{
                                 default: {
-                                    fill: highlightedCountry === country ? '#ffee58' : '#74ccf4',
-                                    stroke: 'rgba(255,255,255,0.2)',
-                                    strokeWidth: 0.5,
-                                    outline: 'none',
-                                    transition: 'all 0.3s ease',
-                                    filter: highlightedCountry === country ? 'drop-shadow(0 0 10px rgba(255, 235, 59, 0.9))' : 'none',
-                                  },
-                                  hover: {
-                                    fill: '#2196f3',
-                                    stroke: '#ffffff',
-                                    strokeWidth: 0.75,
-                                    cursor: 'pointer',
-                                    filter: 'drop-shadow(0 0 8px rgba(33, 150, 243, 0.8))',
+                                  fill: isHighlighted ? '#ffee58' : '#74ccf4',
+                                  stroke: 'rgba(255,255,255,0.2)',
+                                  strokeWidth: 0.5,
+                                  outline: 'none',
+                                  transition: 'all 0.3s ease',
+                                  filter: isHighlighted ? 'drop-shadow(0 0 10px rgba(255, 235, 59, 0.9))' : 'none',
                                 },
-                              pressed: {
-                                fill: '#0d47a1',
-                                stroke: '#ffffff',
-                                strokeWidth: 1,
-                              }
-                            }}
+                                hover: {
+                                  fill: '#2196f3',
+                                  stroke: '#ffffff',
+                                  strokeWidth: 0.75,
+                                  cursor: 'pointer',
+                                  filter: 'drop-shadow(0 0 8px rgba(33, 150, 243, 0.8))',
+                                },
+                                pressed: {
+                                  fill: '#0d47a1',
+                                  stroke: '#ffffff',
+                                  strokeWidth: 1,
+                                }
+                              }}
                           />
                         </Tooltip>
                       );
