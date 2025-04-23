@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, TextField, Button, Typography, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import './Auth.css';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
 
 
@@ -11,6 +12,7 @@ export default function AuthForm() {
   const [error, setError] = useState('');
   const [response, setResponse] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
 
   const handleChange = (e) => {
@@ -36,7 +38,7 @@ export default function AuthForm() {
       if (res.ok) {
         setResponse(mode === 'login' ? `Welcome back, ${data.username}!` : 'Account created!');
         if (data.token) {
-          localStorage.setItem('token', data.token);
+          login(data.token, data.username);
           navigate('/');
         }
       } else {
