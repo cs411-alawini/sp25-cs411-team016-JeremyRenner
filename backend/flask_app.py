@@ -84,5 +84,66 @@ def country_data():
     result = get_country_profile_data(country)
     return jsonify(result)
 
+@app.route('/compare_data_aggregated', methods=['POST'])
+def compare_data_aggregated():
+    data = request.json
+    countries = data.get('countries')
+    indicators = data.get('indicators')
+    start_year = data.get('startYear')
+    end_year = data.get('endYear')
+    disaster_types = data.get('disasterTypes')
+
+    if not all([countries, indicators, start_year, end_year, disaster_types]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    country_str = ','.join(countries)
+    indicator_str = ', '.join(indicators)
+    disaster_str = ','.join(disaster_types)
+
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor(dictionary=True)
+
+        call_query = f"""
+            CALL CompareMultiCountryStatsRangeAggregate(
+                '{country_str}',
+                '{indicator_str}',
+                {start_year},
+                {end_year},
+                '{disaster_str}'
+            )
+        """
+
+        cursor.execute(call_query)
+
+        results = []
+        while True:
+            try:
+                result = cursor.fetchall()
+                results.extend(result)
+                if not cursor.nextset():
+                    break
+            except mysql.connector.errors.InterfaceError:
+                break
+
+        return jsonify(results)
+
+    except mysql.connector.Error as err:
+        return jsonify({"error": str(err)}), 500
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
