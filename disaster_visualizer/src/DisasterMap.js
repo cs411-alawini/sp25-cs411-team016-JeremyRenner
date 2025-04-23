@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Box, Tooltip, Container, CircularProgress } from '@mui/material';
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps';
 import { useNavigate } from 'react-router-dom';
+import { TextField, Autocomplete } from '@mui/material';
+
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -9,11 +11,20 @@ export default function DisasterMap() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [position, setPosition] = useState({ coordinates: [0, 20], zoom: 1 });
+  const [highlightedCountry, setHighlightedCountry] = useState(null);
+  const [countryOptions, setCountryOptions] = useState([]);
+
   
   // Simulate loading data
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
+      fetch(geoUrl)
+        .then(res => res.json())
+        .then(data => {
+            const countries = data.objects.countries.geometries.map(g => g.properties.name || g.properties.NAME);
+            setCountryOptions(countries.sort());
+        });
     }, 1500);
     return () => clearTimeout(timer);
   }, []);
@@ -94,6 +105,7 @@ export default function DisasterMap() {
       }} />
 
       <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 2 }}>
+
         <Typography
           variant="h2"
           sx={{
@@ -134,7 +146,37 @@ export default function DisasterMap() {
           Explore disaster statistics and their impact on global development and economic stability.
           Click on any country to view detailed information and historical trends.
         </Typography>
-
+        <Box sx={{ mb: 4, zIndex: 3, width: '100%', maxWidth: '500px', mx: 'auto' }}>
+            <Autocomplete
+                freeSolo
+                options={countryOptions}
+                onChange={(event, value) => setHighlightedCountry(value)}
+                renderInput={(params) => (
+                <TextField
+                    {...params}
+                    label="Search for a country"
+                    variant="outlined"
+                    sx={{
+                    input: { color: 'white' },
+                    '& label': { color: 'white' },
+                    '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
+                        borderColor: '#90caf9',
+                        },
+                        '&:hover fieldset': {
+                        borderColor: '#64b5f6',
+                        },
+                        '&.Mui-focused fieldset': {
+                        borderColor: '#2196f3',
+                        },
+                    },
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: 2,
+                    }}
+                />
+                )}
+            />
+            </Box>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', my: 12 }}>
             <CircularProgress size={60} sx={{ color: '#82b1ff' }} />
@@ -250,20 +292,21 @@ export default function DisasterMap() {
                             geography={geo}
                             onClick={() => handleCountryClick(country)}
                             style={{
-                              default: {
-                                fill: '#74ccf4',
-                                stroke: 'rgba(255,255,255,0.2)',
-                                strokeWidth: 0.5,
-                                outline: 'none',
-                                transition: 'all 0.3s ease',
-                              },
-                              hover: {
-                                fill: '#2196f3',
-                                stroke: '#ffffff',
-                                strokeWidth: 0.75,
-                                cursor: 'pointer',
-                                filter: 'drop-shadow(0 0 8px rgba(33, 150, 243, 0.8))',
-                              },
+                                default: {
+                                    fill: highlightedCountry === country ? '#ffee58' : '#74ccf4',
+                                    stroke: 'rgba(255,255,255,0.2)',
+                                    strokeWidth: 0.5,
+                                    outline: 'none',
+                                    transition: 'all 0.3s ease',
+                                    filter: highlightedCountry === country ? 'drop-shadow(0 0 10px rgba(255, 235, 59, 0.9))' : 'none',
+                                  },
+                                  hover: {
+                                    fill: '#2196f3',
+                                    stroke: '#ffffff',
+                                    strokeWidth: 0.75,
+                                    cursor: 'pointer',
+                                    filter: 'drop-shadow(0 0 8px rgba(33, 150, 243, 0.8))',
+                                },
                               pressed: {
                                 fill: '#0d47a1',
                                 stroke: '#ffffff',
