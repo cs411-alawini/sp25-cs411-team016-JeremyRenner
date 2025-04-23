@@ -64,21 +64,53 @@ export default function DisasterMap() {
         flexDirection: 'column',
         alignItems: 'center',
         px: { xs: 2, md: 4 },
-        pt: '64px',
+        pt: '100px',
         gap: 4,
         position: 'relative',
         overflow: 'hidden'
       }}
     >
       {/* Navbar */}
-      <AppBar position="fixed" sx={{ background: 'rgba(8, 24, 40, 0.85)', boxShadow: 'none', zIndex: 10 }}>
-        <Toolbar sx={{ justifyContent: 'center', gap: 2 }}>
-          <Button onClick={() => navigate('/compare')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>Compare</Button>
-          <Button onClick={() => navigate('/saved')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>Saved Graphs</Button>
-          <Button onClick={() => navigate('/global')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>Global Stats</Button>
-          <Button onClick={handleLogout} variant="outlined" sx={{ color: '#ef9a9a', borderColor: '#ef9a9a' }}>Sign Out</Button>
+      <AppBar
+        position="fixed"
+        sx={{
+          background: '#0f2027', // solid dark color
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.4)',
+          zIndex: 10,
+        }}
+      >
+        <Toolbar sx={{ justifyContent: 'space-between', px: 4 }}>
+          {/* Left: Title */}
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+              color: '#bbdefb',
+              letterSpacing: '1px',
+              userSelect: 'none',
+            }}
+          >
+            Jeremy Renner
+          </Typography>
+
+          {/* Right: Navigation Buttons */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button onClick={() => navigate('/compare')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
+              Compare
+            </Button>
+            <Button onClick={() => navigate('/saved')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
+              Saved Graphs
+            </Button>
+            <Button onClick={() => navigate('/global')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
+              Global Stats
+            </Button>
+            <Button onClick={handleLogout} variant="outlined" sx={{ color: '#ef9a9a', borderColor: '#ef9a9a' }}>
+              Sign Out
+            </Button>
+          </Box>
         </Toolbar>
       </AppBar>
+
 
       {/* Animated background elements */}
       <Box sx={{
