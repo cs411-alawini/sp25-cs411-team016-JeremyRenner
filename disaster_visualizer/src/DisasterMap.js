@@ -1,29 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Box, Tooltip, Container, CircularProgress } from '@mui/material';
+import {
+  Typography,
+  Box,
+  Container,
+  CircularProgress,
+  Snackbar,
+  Alert
+} from '@mui/material';
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps';
 import { useNavigate } from 'react-router-dom';
-import { TextField, Autocomplete } from '@mui/material';
-
+import './DisasterMap.css';
+import FilterSection from './FilterSection';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+
+const disasterTypeOptions = ["Earthquake", "Tsunami", "Volcano"];
+
+const indicatorOptions = [
+  { value: "AVG(ne.GDPAnnualPercentGrowth) AS AvgGDP", label: "Average GDP Growth" },
+  { value: "AVG(ne.CPI_2010_100) AS AvgCPI", label: "Average CPI (2010=100)" }
+];
 
 export default function DisasterMap() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [position, setPosition] = useState({ coordinates: [0, 20], zoom: 1 });
-  const [highlightedCountries, setHighlightedCountries] = useState([]);
-    const [countryOptions, setCountryOptions] = useState([]);
+  const [selectedCountries, setSelectedCountries] = useState([]);
+  const [disasterTypes, setDisasterTypes] = useState([]);
+  const [indicators, setIndicators] = useState([]);
+  const [yearRange, setYearRange] = useState([2000, 2020]);
+  const [countryOptions, setCountryOptions] = useState([]);
+  const [countryData, setCountryData] = useState([]);
+  const [hoveredCountry, setHoveredCountry] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showError, setShowError] = useState(false);
+  const [hoveredCountryName, setHoveredCountryName] = useState(null);
 
-  
-  // Simulate loading data
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
       fetch(geoUrl)
         .then(res => res.json())
         .then(data => {
-            const countries = data.objects.countries.geometries.map(g => g.properties.name || g.properties.NAME);
-            setCountryOptions(countries.sort());
+          const countries = data.objects.countries.geometries.map(g => g.properties.name || g.properties.NAME);
+          setCountryOptions(countries.sort());
+        })
+        .catch(error => {
+          console.error("Error loading map data:", error);
+          setErrorMessage("Error loading map data. Please refresh the page.");
+          setShowError(true);
         });
     }, 1500);
     return () => clearTimeout(timer);
@@ -51,389 +77,234 @@ export default function DisasterMap() {
     setPosition(position);
   };
 
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
-        color: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        px: { xs: 2, md: 4 },
-        py: { xs: 6, md: 8 },
-        gap: 4,
-        position: 'relative',
-        overflow: 'hidden'
-      }}
-    >
-      {/* Animated background elements */}
-      <Box sx={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 0,
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: '5%',
-          left: '45%',
-          width: '300px',
-          height: '300px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(64,164,244,0.1) 0%, transparent 70%)',
-          animation: 'float 20s infinite alternate ease-in-out'
-        },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          bottom: '10%',
-          right: '15%',
-          width: '250px',
-          height: '250px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(66,165,245,0.08) 0%, transparent 70%)',
-          animation: 'float 15s infinite alternate-reverse ease-in-out'
-        },
-        '@keyframes float': {
-          '0%': { transform: 'translate(0, 0)' },
-          '100%': { transform: 'translate(40px, 20px)' }
+  const handleYearRangeChange = (event, newValue) => {
+    setYearRange(newValue);
+  };
+
+  const handleCloseError = () => {
+    setShowError(false);
+  };
+
+  const handleSubmit = () => {
+    if (selectedCountries.length === 0) {
+      setErrorMessage("Please select at least one country");
+      setShowError(true);
+      return;
+    }
+    const payload = {
+      countries: selectedCountries,
+      indicators: indicators.length > 0 ? indicators.map(ind => ind.value): [],
+      startYear: yearRange[0],
+      endYear: yearRange[1],
+      disasterTypes: disasterTypes.length > 0 ? disasterTypes : ["Earthquake", "Tsunami", "Volcano"]
+    };
+    setDataLoading(true);
+    fetch('http://127.0.0.1:5000/compare_data_aggregated', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        if (data && data.length > 0) {
+          setCountryData(data);
+        } else {
+          setErrorMessage("No data found for the selected criteria");
+          setShowError(true);
         }
-      }} />
+        setDataLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+        setDataLoading(false);
+        setErrorMessage('Error fetching data from the server. Please try again.');
+        setShowError(true);
+      });
+  };
 
-      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 2 }}>
+  return (
+    <Box className="disaster-map-container">
+      <Box className="background-animations" />
 
-        <Typography
-          variant="h2"
-          sx={{
-            fontWeight: 800,
-            background: 'linear-gradient(to right, #bbdefb, #82b1ff)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            textAlign: 'center',
-            letterSpacing: '1px',
-            fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
-            mb: 1,
-            textShadow: '0 4px 30px rgba(0, 0, 0, 0.5)',
-            animation: 'fadeIn 1.5s ease-out',
-            '@keyframes fadeIn': {
-              from: { opacity: 0, transform: 'translateY(-10px)' },
-              to: { opacity: 1, transform: 'translateY(0)' }
-            }
-          }}
-        >
+      <Container maxWidth="xl" className="content-container">
+        <Typography variant="h2" className="title">
           Global Disaster Impact
         </Typography>
-
-        <Typography
-          variant="h6"
-          sx={{
-            color: '#e3f2fd',
-            textAlign: 'center',
-            maxWidth: '800px',
-            fontWeight: 300,
-            fontSize: { xs: '1rem', sm: '1.1rem' },
-            lineHeight: 1.8,
-            mx: 'auto',
-            mb: 4,
-            opacity: 0.9,
-            animation: 'fadeIn 1.5s ease-out 0.3s both',
-          }}
-        >
+        <Typography variant="h6" className="subtitle">
           Explore disaster statistics and their impact on global development and economic stability.
           Click on any country to view detailed information and historical trends.
         </Typography>
-        <Box sx={{ mb: 4, zIndex: 3, width: '100%', maxWidth: '600px', mx: 'auto' }}>
-        <Autocomplete
-            multiple
-            freeSolo
-            options={countryOptions}
-            value={highlightedCountries}
-            onChange={(event, newValue) => setHighlightedCountries(newValue)}
-            ChipProps={{
-                sx: {
-                color: 'white',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid #90caf9',
-                '& .MuiChip-deleteIcon': {
-                    color: 'white',
-                    '&:hover': {
-                    color: '#ff1744'
-                    }
-                }
-                }
-            }}
-            renderInput={(params) => (
-                <TextField
-                {...params}
-                label="Search and highlight countries"
-                variant="outlined"
-                sx={{
-                    input: { color: 'white' },
-                    '& label': { color: 'white' },
-                    '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                        borderColor: '#90caf9',
-                    },
-                    '&:hover fieldset': {
-                        borderColor: '#64b5f6',
-                    },
-                    '&.Mui-focused fieldset': {
-                        borderColor: '#2196f3',
-                    },
-                    },
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: 2,
-                }}
-                />
-            )}
-            />
-
-        </Box>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 12 }}>
-            <CircularProgress size={60} sx={{ color: '#82b1ff' }} />
+          <Box className="loading-container">
+            <CircularProgress size={60} className="loading-spinner" />
           </Box>
         ) : (
-          <Box
-            sx={{
-              width: '100%',
-              height: { xs: '50vh', md: '60vh' },
-              maxHeight: '700px',
-              position: 'relative',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-              background: 'rgba(8, 24, 40, 0.6)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              p: { xs: 1, md: 2 },
-              animation: 'scaleIn 1s ease-out 0.6s both',
-              '@keyframes scaleIn': {
-                from: { opacity: 0, transform: 'scale(0.95)' },
-                to: { opacity: 1, transform: 'scale(1)' }
-              }
-            }}
-          >
-            {/* Zoom controls */}
-            <Box sx={{
-              position: 'absolute',
-              bottom: '20px',
-              right: '20px',
-              zIndex: 10,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1
-            }}>
-              <Box
-                onClick={handleZoomIn}
-                sx={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(255,255,255,0.15)',
-                  backdropFilter: 'blur(4px)',
-                  color: 'white',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.25)',
-                  }
-                }}
-              >
-                +
+          <>
+            <FilterSection
+              selectedCountries={selectedCountries}
+              setSelectedCountries={setSelectedCountries}
+              disasterTypes={disasterTypes}
+              setDisasterTypes={setDisasterTypes}
+              indicators={indicators}
+              setIndicators={setIndicators}
+              yearRange={yearRange}
+              handleYearRangeChange={handleYearRangeChange}
+              handleSubmit={handleSubmit}
+              dataLoading={dataLoading}
+              countryOptions={countryOptions}
+              disasterTypeOptions={disasterTypeOptions}
+              indicatorOptions={indicatorOptions}
+            />
+
+            <Box className="map-container">
+            {hoveredCountryName && (
+  <Box className="country-tooltip">
+    <Typography variant="h6" className="tooltip-title">
+      {hoveredCountryName}
+    </Typography>
+
+    {hoveredCountry ? (
+      <>
+        <Typography variant="body2" className="tooltip-text">
+          Total Disasters <b>{hoveredCountry.TotalDisasters ?? "N/A"}</b>
+        </Typography>
+
+        <Typography variant="body2" className="tooltip-text">
+          Total Deaths <b>{hoveredCountry.TotalDeaths ?? "N/A"}</b>
+        </Typography>
+
+        {indicators.find(i => i.label === "Average GDP Growth") && (
+            <Typography variant="body2" className="tooltip-text">
+                Avg. GDP Growth{" "}
+                <b>
+                {hoveredCountry.AvgGDP !== undefined && !isNaN(Number(hoveredCountry.AvgGDP))
+                    ? Number(hoveredCountry.AvgGDP).toFixed(2) + "%"
+                    : "N/A"}
+                </b>
+            </Typography>
+            )}
+
+            {indicators.find(i => i.label === "Average CPI (2010=100)") && (
+            <Typography variant="body2" className="tooltip-text">
+                Avg. CPI{" "}
+                <b>
+                {hoveredCountry.AvgCPI !== undefined && !isNaN(Number(hoveredCountry.AvgCPI))
+                    ? Number(hoveredCountry.AvgCPI).toFixed(2)
+                    : "N/A"}
+                </b>
+            </Typography>
+            )}
+      </>
+    ) : (
+      <Typography variant="body2" className="tooltip-text">
+        No data available.
+      </Typography>
+    )}
+  </Box>
+)}
+
+              <Box className="zoom-controls">
+                <Box onClick={handleZoomIn} className="zoom-button">+</Box>
+                <Box onClick={handleZoomOut} className="zoom-button">-</Box>
               </Box>
-              <Box
-                onClick={handleZoomOut}
-                sx={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(255,255,255,0.15)',
-                  backdropFilter: 'blur(4px)',
-                  color: 'white',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.25)',
-                  }
-                }}
+              <ComposableMap
+                projectionConfig={{ scale: 160 }}
+                width={1200}
+                height={600}
+                style={{ width: '100%', height: '100%' }}
               >
-                -
-              </Box>
-            </Box>
-            
-            <ComposableMap
-              projectionConfig={{ scale: 160 }}
-              width={1200}
-              height={600}
-              style={{ width: '100%', height: '100%' }}
-            >
-              <ZoomableGroup
-                zoom={position.zoom}
-                center={position.coordinates}
-                onMoveEnd={handleMoveEnd}
-                translateExtent={[
-                  [0, 0],
-                  [1200, 600]
-                ]}
-              >
-                <Geographies geography={geoUrl}>
-                  {({ geographies }) =>
-                    geographies.map((geo) => {
-                      const country = geo.properties.NAME || geo.properties.name;
-                      const isHighlighted = highlightedCountries.includes(country);
-                      
-                      return (
-                        <Tooltip 
-                          key={geo.rsmKey} 
-                          title={
-                            <Typography sx={{ p: 1, fontSize: '0.9rem' }}>
-                              {country}
-                            </Typography>
-                          } 
-                          arrow
-                        >
-                          <Geography
+                <ZoomableGroup
+                  zoom={position.zoom}
+                  center={position.coordinates}
+                  onMoveEnd={handleMoveEnd}
+                  translateExtent={[[0, 0], [1200, 600]]}
+                >
+                  <Geographies geography={geoUrl}>
+                    {({ geographies }) =>
+                      geographies.map((geo) => {
+                        const country = geo.properties.NAME || geo.properties.name;
+                        const countryDataItem = countryData.find(item => item.CountryName === country);
+                        const isHighlighted = !!countryDataItem;
+                        return (
+                            <Geography
+                            key={geo.rsmKey}
                             geography={geo}
                             onClick={() => handleCountryClick(country)}
-                            style={{
-                                default: {
-                                  fill: isHighlighted ? '#ffee58' : '#74ccf4',
-                                  stroke: 'rgba(255,255,255,0.2)',
-                                  strokeWidth: 0.5,
-                                  outline: 'none',
-                                  transition: 'all 0.3s ease',
-                                  filter: isHighlighted ? 'drop-shadow(0 0 10px rgba(255, 235, 59, 0.9))' : 'none',
-                                },
-                                hover: {
-                                  fill: '#2196f3',
-                                  stroke: '#ffffff',
-                                  strokeWidth: 0.75,
-                                  cursor: 'pointer',
-                                  filter: 'drop-shadow(0 0 8px rgba(33, 150, 243, 0.8))',
-                                },
-                                pressed: {
-                                  fill: '#0d47a1',
-                                  stroke: '#ffffff',
-                                  strokeWidth: 1,
-                                }
-                              }}
+                            onMouseEnter={() => {
+                              setHoveredCountryName(country); // Always set country name
+                              const countryDataItem = countryData.find(item => item.CountryName === country);
+                              if (countryDataItem) {
+                                setHoveredCountry(countryDataItem);
+                              } else {
+                                setHoveredCountry(null);
+                              }
+                            }}
+                            onMouseLeave={() => {
+                              setHoveredCountry(null);
+                              setHoveredCountryName(null);
+                            }}
+                            className={isHighlighted ? "geography-highlighted" : "geography-normal"}
                           />
-                        </Tooltip>
-                      );
-                    })
-                  }
-                </Geographies>
-              </ZoomableGroup>
-            </ComposableMap>
-          </Box>
+                          
+                        );
+                      })
+                    }
+                  </Geographies>
+                </ZoomableGroup>
+              </ComposableMap>
+            </Box>
+          </>
         )}
 
-        <Box sx={{ 
-          mt: 4, 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          justifyContent: 'center', 
-          gap: 3,
-          animation: 'fadeIn 1.5s ease-out 0.9s both'
-        }}>
-          <Box sx={{ 
-            p: 3, 
-            borderRadius: '12px', 
-            background: 'rgba(13, 71, 161, 0.2)', 
-            backdropFilter: 'blur(6px)',
-            border: '1px solid rgba(144, 202, 249, 0.3)',
-            textAlign: 'center',
-            flex: '1',
-            maxWidth: '280px',
-            transition: 'transform 0.3s',
-            '&:hover': { transform: 'translateY(-5px)' }
-          }}>
-            <Typography variant="h4" sx={{ fontSize: '2rem', color: '#82b1ff', mb: 2 }}>
-              5000+
-            </Typography>
-            <Typography sx={{ color: '#e3f2fd', fontWeight: 300 }}>
+        <Box className="stats-container">
+          <Box className="stat-box">
+            <Typography variant="h4" className="stat-value">5000+</Typography>
+            <Typography className="stat-label">
               Disasters tracked globally with real-time impact analysis
             </Typography>
           </Box>
-
-          <Box sx={{ 
-            p: 3, 
-            borderRadius: '12px', 
-            background: 'rgba(13, 71, 161, 0.2)', 
-            backdropFilter: 'blur(6px)',
-            border: '1px solid rgba(144, 202, 249, 0.3)',
-            textAlign: 'center',
-            flex: '1',
-            maxWidth: '280px',
-            transition: 'transform 0.3s',
-            '&:hover': { transform: 'translateY(-5px)' }
-          }}>
-            <Typography variant="h4" sx={{ fontSize: '2rem', color: '#82b1ff', mb: 2 }}>
-              192
-            </Typography>
-            <Typography sx={{ color: '#e3f2fd', fontWeight: 300 }}>
+          <Box className="stat-box">
+            <Typography variant="h4" className="stat-value">192</Typography>
+            <Typography className="stat-label">
               Countries with comprehensive disaster recovery metrics
             </Typography>
           </Box>
-
-          <Box sx={{ 
-            p: 3, 
-            borderRadius: '12px', 
-            background: 'rgba(13, 71, 161, 0.2)', 
-            backdropFilter: 'blur(6px)',
-            border: '1px solid rgba(144, 202, 249, 0.3)',
-            textAlign: 'center',
-            flex: '1',
-            maxWidth: '280px',
-            transition: 'transform 0.3s',
-            '&:hover': { transform: 'translateY(-5px)' }
-          }}>
-            <Typography variant="h4" sx={{ fontSize: '2rem', color: '#82b1ff', mb: 2 }}>
-              50 Years
-            </Typography>
-            <Typography sx={{ color: '#e3f2fd', fontWeight: 300 }}>
+          <Box className="stat-box">
+            <Typography variant="h4" className="stat-value">50 Years</Typography>
+            <Typography className="stat-label">
               Of historical disaster data to analyze patterns and trends
             </Typography>
-            
           </Box>
-          <Box sx={{ 
-            p: 3,
-            borderRadius: '12px', 
-            background: 'rgba(13, 71, 161, 0.2)', 
-            backdropFilter: 'blur(6px)',
-            border: '1px solid rgba(144, 202, 249, 0.3)',
-            textAlign: 'center',
-            flex: '1',
-            maxWidth: '280px',
-            transition: 'transform 0.3s',
-            '&:hover': { transform: 'translateY(-5px)' }
-            
-          }}
-          onClick= {handleCompareClick}
-          >
-            <Typography variant="h4" sx={{ fontSize: '2rem', color: '#82b1ff', mb: 2 }}>
-              Compare Countries
-            </Typography>
-            <Typography sx={{ color: '#e3f2fd', fontWeight: 300 }}>
-              View Distaster and Economic data between the countries
+          <Box className="stat-box compare-box" onClick={handleCompareClick}>
+            <Typography variant="h4" className="stat-value">Compare Countries</Typography>
+            <Typography className="stat-label">
+              View Disaster and Economic data between the countries
             </Typography>
           </Box>
         </Box>
       </Container>
+
+      <Snackbar 
+        open={showError} 
+        autoHideDuration={6000} 
+        onClose={handleCloseError}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseError} severity="error" sx={{ 
+          width: '100%',
+          backgroundColor: 'rgba(211, 47, 47, 0.9)',
+          color: 'white',
+          '& .MuiAlert-icon': {
+            color: 'white'
+          }
+        }}>
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

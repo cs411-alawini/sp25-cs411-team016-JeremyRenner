@@ -1,0 +1,613 @@
+/* Main container styles */
+.disaster-map-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Background animation elements */
+  .background-animations {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+  
+  .background-animations::before {
+    content: "";
+    position: absolute;
+    top: 5%;
+    left: 45%;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(64,164,244,0.1) 0%, transparent 70%);
+    animation: float 20s infinite alternate ease-in-out;
+  }
+  
+  .background-animations::after {
+    content: "";
+    position: absolute;
+    bottom: 10%;
+    right: 15%;
+    width: 250px;
+    height: 250px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(66,165,245,0.08) 0%, transparent 70%);
+    animation: float 15s infinite alternate-reverse ease-in-out;
+  }
+  
+  @keyframes float {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(40px, 20px); }
+  }
+  
+  /* Content container */
+  .content-container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 1400px;
+  }
+  
+  /* Title and subtitle styling */
+  .title {
+    font-weight: 800;
+    background: linear-gradient(to right, #bbdefb, #82b1ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+    letter-spacing: 1px;
+    font-size: 3.5rem;
+    margin-bottom: 16px;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    animation: fadeIn 1.5s ease-out;
+  }
+  
+  .subtitle {
+    color: #e3f2fd;
+    text-align: center;
+    max-width: 800px;
+    font-weight: 300;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    margin: 0 auto 32px;
+    opacity: 0.9;
+    animation: fadeIn 1.5s ease-out 0.3s both;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Loading spinner */
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    margin: 96px 0;
+  }
+  
+  .loading-spinner {
+    color: #82b1ff;
+  }
+  
+  /* Filters section */
+  .filters-container {
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 24px;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-gap: 16px;
+    width: 100%;
+    position: relative;
+    z-index: 10; /* Higher z-index to ensure dropdowns appear above map */
+  }
+  
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  
+  .filter-label {
+    color: #90caf9;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  /* Dropdown styling */
+  .filter-dropdown {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(144, 202, 249, 0.3);
+    border-radius: 6px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    color: white;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+  }
+  
+  .filter-dropdown:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(144, 202, 249, 0.5);
+  }
+  
+  /* Country search specific styles */
+  .country-search-container {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  
+  .country-search-input {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(144, 202, 249, 0.3);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: white;
+    width: 100%;
+    font-size: 0.95rem;
+  }
+  
+  .country-search-input:hover, 
+  .country-search-input:focus {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(144, 202, 249, 0.5);
+    outline: none;
+  }
+  
+  .country-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  
+  /* Dropdown menu styling for ALL dropdown menus */
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    width: 100%;
+    background-color: rgba(27, 38, 53, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(144, 202, 249, 0.3);
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000; /* Ensure menus appear on top */
+  }
+  
+  .dropdown-menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .dropdown-menu-item {
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .dropdown-menu-item:hover {
+    background-color: rgba(144, 202, 249, 0.1);
+  }
+  
+  .dropdown-menu-item.selected {
+    background-color: rgba(144, 202, 249, 0.2);
+  }
+  
+  .dropdown-checkbox {
+    margin-right: 10px;
+    width: 16px;
+    height: 16px;
+    accent-color: #2196f3;
+  }
+  
+  /* Selected items chips */
+  .selected-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  
+  .selected-chip {
+    background-color: rgba(144, 202, 249, 0.2);
+    border: 1px solid rgba(144, 202, 249, 0.4);
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .chip-remove {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    font-size: 0.9rem;
+  }
+  
+  .chip-remove:hover {
+    opacity: 1;
+    color: #ff5252;
+  }
+  
+  /* Year range slider */
+  .year-range-container {
+    padding: 0 6px;
+  }
+  
+  .year-slider {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    position: relative;
+    margin: 16px 0;
+  }
+  
+  .year-slider-track {
+    position: absolute;
+    height: 100%;
+    background: #2196f3;
+    border-radius: 2px;
+  }
+  
+  .year-slider-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #90caf9;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  }
+  
+  .year-range-values {
+    display: flex;
+    justify-content: space-between;
+    color: #90caf9;
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+  
+  /* Apply button */
+  .apply-button {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 24px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: auto;
+    height: 42px;
+    align-self: flex-end;
+  }
+  
+  .apply-button:hover {
+    background-color: #1976d2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .apply-button:disabled {
+    background-color: rgba(33, 150, 243, 0.5);
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  /* Map container */
+  .map-container {
+    width: 100%;
+    height: 60vh;
+    max-height: 700px;
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    background: rgba(8, 24, 40, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 0;
+    animation: scaleIn 1s ease-out 0.6s both;
+    z-index: 1; /* Lower z-index than the filter container */
+  }
+  
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  /* Country tooltip */
+  .country-tooltip {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    max-width: 300px;
+    background-color: rgba(8, 24, 40, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    padding: 16px;
+    border: 1px solid rgba(144, 202, 249, 0.4);
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .tooltip-title {
+    color: #90caf9;
+    margin-bottom: 12px;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  
+  .tooltip-text {
+    color: white;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .tooltip-text b {
+    color: #90caf9;
+  }
+  
+  /* Zoom controls */
+  .zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .zoom-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255,255,255,0.15);
+    backdrop-filter: blur(4px);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  .zoom-button:hover {
+    background-color: rgba(255,255,255,0.25);
+    transform: translateY(-2px);
+  }
+  
+  /* Geography styles */
+  .geography-normal {
+    fill: #74ccf4;
+    stroke: rgba(255,255,255,0.2);
+    stroke-width: 0.5;
+    outline: none;
+    transition: all 0.3s ease;
+  }
+  
+  .geography-normal:hover {
+    fill: #2196f3;
+    stroke: #ffffff;
+    stroke-width: 0.75;
+    cursor: pointer;
+    filter: drop-shadow(0 0 8px rgba(33, 150, 243, 0.8));
+  }
+  
+  .geography-normal:active {
+    fill: #0d47a1;
+    stroke: #ffffff;
+    stroke-width: 1;
+  }
+  
+  .geography-highlighted {
+    fill: #ffee58;
+    stroke: rgba(255,255,255,0.2);
+    stroke-width: 0.5;
+    outline: none;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 10px rgba(255, 235, 59, 0.9));
+  }
+  
+  .geography-highlighted:hover {
+    fill: #ffeb3b;
+    stroke: #ffffff;
+    stroke-width: 0.75;
+    cursor: pointer;
+    filter: drop-shadow(0 0 15px rgba(255, 235, 59, 0.9));
+  }
+  
+  .geography-highlighted:active {
+    fill: #fdd835;
+    stroke: #ffffff;
+    stroke-width: 1;
+  }
+  
+  /* Stats section */
+  .stats-container {
+    margin-top: 32px;
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    animation: fadeIn 1.5s ease-out 0.9s both;
+    flex-wrap: wrap;
+  }
+  
+  .stat-box {
+    padding: 24px;
+    border-radius: 12px;
+    background: rgba(13, 71, 161, 0.2);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(144, 202, 249, 0.3);
+    text-align: center;
+    flex: 1;
+    min-width: 200px;
+    max-width: 280px;
+    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .stat-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    color: #82b1ff;
+    margin-bottom: 16px;
+  }
+  
+  .stat-label {
+    color: #e3f2fd;
+    font-weight: 300;
+  }
+  
+  .compare-box {
+    cursor: pointer;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 992px) {
+    .filters-container {
+      grid-template-columns: 1fr 1fr;
+    }
+    
+    .apply-button {
+      grid-column: 2;
+      justify-self: end;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .filters-container {
+      grid-template-columns: 1fr;
+      padding: 16px;
+    }
+    
+    .apply-button {
+      grid-column: 1;
+      justify-self: center;
+      width: 100%;
+      margin-top: 16px;
+    }
+    
+    .title {
+      font-size: 2.5rem;
+    }
+    
+    .subtitle {
+      font-size: 1rem;
+    }
+    
+    .map-container {
+      height: 50vh;
+    }
+    
+    .stats-container {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .stat-box {
+      width: 100%;
+      max-width: none;
+    }
+  }
+  
+  /* Ensure dropdown menus appear on top of everything */
+  .MuiPopover-root {
+    z-index: 9999 !important;
+  }
+  
+  .MuiPopover-paper {
+    background-color: rgba(27, 38, 53, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    color: white !important;
+    border: 1px solid rgba(144, 202, 249, 0.3) !important;
+    z-index: 9999;
+  }
+  
+  /* Fix for dropdown item styling */
+  .MuiMenuItem-root {
+    color: white !important;
+  }
+  
+  .MuiMenuItem-root:hover {
+    background-color: rgba(144, 202, 249, 0.1) !important;
+  }
+  
+  .MuiCheckbox-root {
+    color: #90caf9 !important;
+  }
+  
+  /* Fix for search input */
+  .MuiInputBase-root {
+    color: white !important;
+  }
+  
+  .MuiOutlinedInput-notchedOutline {
+    border-color: rgba(144, 202, 249, 0.3) !important;
+  }
+  
+  .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    border-color: rgba(144, 202, 249, 0.5) !important;
+  }
+  
+  .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+    border-color: #2196f3 !important;
+  }
+  
+  /* Chip styling fixes */
+  .MuiChip-root {
+    background-color: rgba(144, 202, 249, 0.2) !important;
+    color: white !important;
+    border: 1px solid rgba(144, 202, 249, 0.4) !important;
+  }
+  
+  .MuiChip-deleteIcon {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+  
+  .MuiChip-deleteIcon:hover {
+    color: #ff5252 !important;
+  }
