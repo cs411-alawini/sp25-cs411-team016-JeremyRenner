@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Box, Tooltip, Container, CircularProgress } from '@mui/material';
+import { Typography, Box, Container, CircularProgress, Button, AppBar, Toolbar } from '@mui/material';
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps';
 import { useNavigate } from 'react-router-dom';
+import { TextField, Autocomplete } from '@mui/material';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -9,11 +10,25 @@ export default function DisasterMap() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [position, setPosition] = useState({ coordinates: [0, 20], zoom: 1 });
-  
-  // Simulate loading data
+  const [highlightedCountries, setHighlightedCountries] = useState([]);
+  const [countryOptions, setCountryOptions] = useState([]);
+  const [startYear, setStartYear] = useState('');
+  const [endYear, setEndYear] = useState('');
+  const [selectedDisasters, setSelectedDisasters] = useState([]);
+  const [selectedIndicators, setSelectedIndicators] = useState([]);
+  const [filteredDataByCountry, setFilteredDataByCountry] = useState({});
+  const [selectedCountries, setSelectedCountries] = useState([]);
+  const [selectedCountryInfo, setSelectedCountryInfo] = useState(null);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
+      fetch(geoUrl)
+        .then(res => res.json())
+        .then(data => {
+          const countries = data.objects.countries.geometries.map(g => g.properties.name || g.properties.NAME);
+          setCountryOptions(countries.sort());
+        });
     }, 1500);
     return () => clearTimeout(timer);
   }, []);
@@ -40,6 +55,87 @@ export default function DisasterMap() {
     setPosition(position);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    navigate('/auth');
+  };
+
+  const handleApplyFilters = async () => {
+    // Create arrays for default values
+    const allDisasterTypes = ['Earthquake', 'Tsunami', 'Volcano'];
+    const allIndicators = [
+      "AVG(ne.GDPAnnualPercentGrowth) AS AvgGDP",
+      "AVG(ne.CPI_2010_100) AS AvgCPI"
+    ];
+    
+    const payload = {
+      countries: selectedCountries,
+      indicators: selectedIndicators.length > 0 ? selectedIndicators : allIndicators,
+      startYear: parseInt(startYear),
+      endYear: parseInt(endYear),
+      disasterTypes: selectedDisasters.length > 0 ? selectedDisasters : allDisasterTypes
+    };
+    
+    try {
+      const response = await fetch('http://127.0.0.1:5000/compare_data_aggregated', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      
+      // Transform into a lookup object by country
+      const countryDataMap = {};
+      data.forEach(entry => {
+        const country = entry.CountryName;
+        countryDataMap[country] = { ...entry };
+        delete countryDataMap[country].CountryName;
+      });
+      setFilteredDataByCountry(countryDataMap);
+      
+      // Set all selected countries as highlighted
+      setHighlightedCountries(selectedCountries);
+    } catch (error) {
+      console.error("Filter fetch failed:", error);
+    }
+  };
+  
+  // Common styles for input fields
+  const textInputStyle = {
+    input: { color: 'white' },
+    '& label': { color: 'white' },
+    '& .MuiOutlinedInput-root': {
+      '& fieldset': { borderColor: '#90caf9' },
+      '&:hover fieldset': { borderColor: '#64b5f6' },
+      '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+    },
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 2,
+  };
+
+  // Common style for selection chips - NEW
+  const chipStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: '4px',
+    m: 0.5,
+    px: 1.5,
+    py: 0.75,
+    color: 'white',
+    fontSize: '0.875rem',
+  };
+  
+  // Common style for the delete icon in chips - NEW
+  const chipDeleteIconStyle = {
+    ml: 1,
+    color: '#adbdcc',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+  };
+  
   return (
     <Box
       sx={{
@@ -50,12 +146,53 @@ export default function DisasterMap() {
         flexDirection: 'column',
         alignItems: 'center',
         px: { xs: 2, md: 4 },
-        py: { xs: 6, md: 8 },
+        pt: '100px',
         gap: 4,
         position: 'relative',
         overflow: 'hidden'
       }}
     >
+      {/* Navbar */}
+      <AppBar
+        position="fixed"
+        sx={{
+          background: '#0f2027', // solid dark color
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.4)',
+          zIndex: 10,
+        }}
+      >
+        <Toolbar sx={{ justifyContent: 'space-between', px: 4 }}>
+          {/* Left: Title */}
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+              color: '#bbdefb',
+              letterSpacing: '1px',
+              userSelect: 'none',
+            }}
+          >
+            Jeremy Renner
+          </Typography>
+
+          {/* Right: Navigation Buttons */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button onClick={() => navigate('/compare')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
+              Compare
+            </Button>
+            <Button onClick={() => navigate('/saved')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
+              Saved Graphs
+            </Button>
+            <Button onClick={() => navigate('/global')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
+              Global Stats
+            </Button>
+            <Button onClick={handleLogout} variant="outlined" sx={{ color: '#ef9a9a', borderColor: '#ef9a9a' }}>
+              Sign Out
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
       {/* Animated background elements */}
       <Box sx={{
         position: 'absolute',
@@ -94,6 +231,7 @@ export default function DisasterMap() {
       }} />
 
       <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 2 }}>
+
         <Typography
           variant="h2"
           sx={{
@@ -134,7 +272,207 @@ export default function DisasterMap() {
           Explore disaster statistics and their impact on global development and economic stability.
           Click on any country to view detailed information and historical trends.
         </Typography>
+        <Box sx={{ mb: 4, zIndex: 3, width: '100%', maxWidth: '1200px', mx: 'auto' }}>
+          {/* Filter section in a single row */}
+          <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2, alignItems: 'center' }}>
+            {/* Country Search */}
+            <Box sx={{ flex: '1.5 1 0%' }}>
+              <Autocomplete
+                multiple
+                options={countryOptions}
+                value={selectedCountries}
+                onChange={(e, value) => setSelectedCountries(value)}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => {
+                    const tagProps = getTagProps({ index });
+                    // Extract the onDelete function from the original props
+                    const { onDelete } = tagProps;
+                    return (
+                      <Box
+                        component="span"
+                        {...tagProps}
+                        // Remove the original onDelete to prevent duplicate handlers
+                        onDelete={undefined}
+                        sx={chipStyle}
+                      >
+                        {option}
+                        <span 
+                          onClick={onDelete} // Use the original onDelete function
+                          style={{
+                            marginLeft: '8px',
+                            color: '#adbdcc',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                          }}
+                        >×</span>
+                      </Box>
+                    );
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Search for a country"
+                    variant="outlined"
+                    sx={textInputStyle}
+                  />
+                )}
+              />
+            </Box>
 
+            {/* Year Range - Side by side */}
+            <Box sx={{ flex: '0.75 1 0%' }}>
+              <TextField
+                label="Start Year"
+                variant="outlined"
+                type="number"
+                fullWidth
+                value={startYear}
+                onChange={(e) => setStartYear(e.target.value)}
+                sx={textInputStyle}
+              />
+            </Box>
+            <Box sx={{ flex: '0.75 1 0%' }}>
+              <TextField
+                label="End Year"
+                variant="outlined"
+                type="number"
+                fullWidth
+                value={endYear}
+                onChange={(e) => setEndYear(e.target.value)}
+                sx={textInputStyle}
+              />
+            </Box>
+
+            {/* Disaster Types */}
+            <Box sx={{ flex: '1 1 0%' }}>
+              <Autocomplete
+                multiple
+                options={['Earthquake', 'Tsunami', 'Volcano']}
+                value={selectedDisasters}
+                onChange={(e, value) => setSelectedDisasters(value)}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => {
+                    const tagProps = getTagProps({ index });
+                    // Extract the onDelete function from the original props
+                    const { onDelete } = tagProps;
+                    return (
+                      <Box
+                        component="span"
+                        {...tagProps}
+                        // Remove the original onDelete to prevent duplicate handlers
+                        onDelete={undefined}
+                        sx={chipStyle}
+                      >
+                        {option}
+                        <span 
+                          onClick={onDelete} // Use the original onDelete function
+                          style={{
+                            marginLeft: '8px',
+                            color: '#adbdcc',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                          }}
+                        >×</span>
+                      </Box>
+                    );
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField {...params} variant="outlined" label="Disaster Types" sx={textInputStyle} />
+                )}
+              />
+            </Box>
+
+            {/* Economic Indicators */}
+            <Box sx={{ flex: '1.5 1 0%' }}>
+              <Autocomplete
+                multiple
+                options={[
+                  "AVG(ne.GDPAnnualPercentGrowth) AS AvgGDP",
+                  "AVG(ne.CPI_2010_100) AS AvgCPI",
+                  "AVG(ne.ExportsAnnualPercentGrowth) AS AvgExportGrowth",
+                  "AVG(ne.ImportAnnualPercentGrowth) AS AvgImportGrowth",
+                  "AVG(ne.UnemploymentPercent) AS AvgUnemployment",
+                  "AVG(se.AgricultureAnnualPercentGrowth) AS AvgAgrictultureGrowth",
+                  "AVG(se.IndustryAnnualPercentGrowth) AS AvgIndustryGrowth",
+                  "AVG(se.ManufacturingAnnualPercentGrowth) AS AvgManufacturingGrowth",
+                  "AVG(se.ServiceAnnualPercentGrowth) AS AvgServiceGrowth"
+                ]}
+                value={selectedIndicators}
+                onChange={(e, value) => setSelectedIndicators(value)}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => {
+                    const tagProps = getTagProps({ index });
+                    const { onDelete } = tagProps;
+                    
+                    // Display the friendly name instead of the SQL expression
+                    const displayName = option.includes(" AS ") 
+                      ? option.split(" AS ")[1] 
+                      : option;
+                      
+                    return (
+                      <Box
+                        component="span"
+                        {...tagProps}
+                        onDelete={undefined}
+                        sx={chipStyle}
+                      >
+                        {displayName}
+                        <span 
+                          onClick={onDelete}
+                          style={{
+                            marginLeft: '8px',
+                            color: '#adbdcc',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                          }}
+                        >×</span>
+                      </Box>
+                    );
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField {...params} variant="outlined" label="Economic Indicators" sx={textInputStyle} />
+                )}
+                renderOption={(props, option) => {
+                  // Display cleaner label in dropdown
+                  const friendlyName = option.includes(" AS ") 
+                    ? option.split(" AS ")[1]
+                    : option;
+                  
+                  return (
+                    <li {...props}>
+                      <Typography sx={{fontSize: '0.9rem'}}>{friendlyName}</Typography>
+                    </li>
+                  );
+                }}
+              />
+            </Box>
+
+            {/* Apply Filters Button */}
+            <Box sx={{ flex: '0.5 0 auto' }}>
+              <Button
+                variant="contained"
+                onClick={handleApplyFilters}
+                sx={{
+                  backgroundColor: '#64b5f6',
+                  color: '#0d1b2a',
+                  fontWeight: 600,
+                  height: '56px',
+                  '&:hover': {
+                    backgroundColor: '#42a5f5',
+                  }
+                }}
+              >
+                Apply Filters
+              </Button>
+            </Box>
+          </Box>
+        </Box>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', my: 12 }}>
             <CircularProgress size={60} sx={{ color: '#82b1ff' }} />
@@ -160,6 +498,95 @@ export default function DisasterMap() {
               }
             }}
           >
+            {/* Country Info Panel */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                width: '300px', // Increased width to fit more content
+                minHeight: selectedCountryInfo && selectedCountryInfo.data && Object.keys(selectedCountryInfo.data).length > 0 ? '100px' : 'auto',
+                maxHeight: '450px', // Increased max height to show more rows
+                overflowY: 'auto',
+                zIndex: 10,
+                p: 2.5, // Slightly increased padding
+                borderRadius: '8px',
+                backgroundColor: 'rgba(8, 24, 40, 0.8)', 
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(144, 202, 249, 0.4)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                transition: 'all 0.3s ease',
+                opacity: selectedCountryInfo ? 1 : 0,
+                transform: selectedCountryInfo ? 'translateY(0)' : 'translateY(-10px)',
+                visibility: selectedCountryInfo ? 'visible' : 'hidden',
+              }}
+            >
+              {selectedCountryInfo ? (
+                <>
+                  <Typography sx={{ 
+                    fontWeight: 700, 
+                    fontSize: '1.1rem',
+                    color: '#e3f2fd', 
+                    borderBottom: selectedCountryInfo.data && Object.keys(selectedCountryInfo.data).length > 0 ? '1px solid rgba(144, 202, 249, 0.3)' : 'none',
+                    pb: selectedCountryInfo.data && Object.keys(selectedCountryInfo.data).length > 0 ? 1.5 : 0,
+                    mb: selectedCountryInfo.data && Object.keys(selectedCountryInfo.data).length > 0 ? 2 : 0,
+                    textAlign: 'center',
+                    letterSpacing: '0.5px',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                  }}>
+                    {selectedCountryInfo.name}
+                  </Typography>
+                  
+                  {selectedCountryInfo.data && 
+                    Object.entries(selectedCountryInfo.data).map(([key, value]) => {
+                      // Clean up the indicator key for display
+                      const displayKey = key
+                        .replace(/^Avg/, '')  // Remove 'Avg' prefix
+                        .replace(/Growth$/, ' Growth')  // Add space before 'Growth'
+                        .replace(/([A-Z])/g, ' $1')  // Add space before capital letters
+                        .trim();  // Remove any extra spaces
+                        
+                      return (
+                        <Box key={key} sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          mb: 1,
+                          pb: 0.75,
+                          borderBottom: '1px solid rgba(144, 202, 249, 0.1)',
+                          '&:last-child': {
+                            borderBottom: 'none',
+                          }
+                        }}>
+                          <Typography sx={{ 
+                            fontSize: '0.9rem', 
+                            color: '#90caf9',
+                            maxWidth: '55%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}>
+                            {displayKey}:
+                          </Typography>
+                          <Typography sx={{ 
+                            fontSize: '0.9rem', 
+                            color: '#ffffff', 
+                            fontWeight: 500,
+                            ml: 1,
+                            textAlign: 'right',
+                          }}>
+                            {parseFloat(value).toFixed(2)}
+                          </Typography>
+                        </Box>
+                      );
+                    })
+                  }
+                </>
+              ) : (
+                <Typography sx={{ fontSize: '0.85rem', color: '#ccc' }}>
+                  Hover over a country to view details
+                </Typography>
+              )}
+            </Box>
+            
             {/* Zoom controls */}
             <Box sx={{
               position: 'absolute',
@@ -237,41 +664,46 @@ export default function DisasterMap() {
                       const country = geo.properties.NAME || geo.properties.name;
                       
                       return (
-                        <Tooltip 
-                          key={geo.rsmKey} 
-                          title={
-                            <Typography sx={{ p: 1, fontSize: '0.9rem' }}>
-                              {country}
-                            </Typography>
-                          } 
-                          arrow
-                        >
-                          <Geography
-                            geography={geo}
-                            onClick={() => handleCountryClick(country)}
-                            style={{
-                              default: {
-                                fill: '#74ccf4',
-                                stroke: 'rgba(255,255,255,0.2)',
-                                strokeWidth: 0.5,
-                                outline: 'none',
-                                transition: 'all 0.3s ease',
-                              },
-                              hover: {
-                                fill: '#2196f3',
-                                stroke: '#ffffff',
-                                strokeWidth: 0.75,
-                                cursor: 'pointer',
-                                filter: 'drop-shadow(0 0 8px rgba(33, 150, 243, 0.8))',
-                              },
-                              pressed: {
-                                fill: '#0d47a1',
-                                stroke: '#ffffff',
-                                strokeWidth: 1,
-                              }
-                            }}
-                          />
-                        </Tooltip>
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          onClick={() => handleCountryClick(country)}
+                          onMouseEnter={() => {
+                            // Set the selected country info when hovering
+                            const countryData = filteredDataByCountry[country] || null;
+                            setSelectedCountryInfo({ 
+                              name: country, 
+                              data: countryData 
+                            });
+                          }}
+                          onMouseLeave={() => {
+                            // Optional: Clear the info when mouse leaves
+                            // Uncomment if you want the panel to disappear when not hovering
+                            // setSelectedCountryInfo(null);
+                          }}
+                          style={{
+                            default: {
+                              fill: highlightedCountries.includes(country) ? '#ffee58' : '#74ccf4',
+                              stroke: 'rgba(255,255,255,0.2)',
+                              strokeWidth: 0.5,
+                              outline: 'none',
+                              transition: 'all 0.3s ease',
+                              filter: highlightedCountries.includes(country) ? 'drop-shadow(0 0 10px rgba(255, 235, 59, 0.9))' : 'none',
+                            },
+                            hover: {
+                              fill: '#2196f3',
+                              stroke: '#ffffff',
+                              strokeWidth: 0.75,
+                              cursor: 'pointer',
+                              filter: 'drop-shadow(0 0 8px rgba(33, 150, 243, 0.8))',
+                            },
+                            pressed: {
+                              fill: '#0d47a1',
+                              stroke: '#ffffff',
+                              strokeWidth: 1,
+                            }
+                          }}
+                        />
                       );
                     })
                   }
@@ -359,10 +791,10 @@ export default function DisasterMap() {
             flex: '1',
             maxWidth: '280px',
             transition: 'transform 0.3s',
-            '&:hover': { transform: 'translateY(-5px)' }
-            
+            '&:hover': { transform: 'translateY(-5px)' },
+            cursor: 'pointer'
           }}
-          onClick= {handleCompareClick}
+          onClick={handleCompareClick}
           >
             <Typography variant="h4" sx={{ fontSize: '2rem', color: '#82b1ff', mb: 2 }}>
               Compare Countries

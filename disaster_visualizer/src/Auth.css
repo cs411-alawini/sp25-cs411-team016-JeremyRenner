@@ -1,0 +1,78 @@
+.auth-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  
+  .auth-form {
+    max-width: 420px;
+    width: 100%;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    background-color: rgba(8, 24, 40, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  
+  .auth-title {
+    margin-bottom: 1rem;
+    text-align: center;
+    font-weight: 700;
+    padding: 3vh;
+    background: linear-gradient(to right, #bbdefb, #82b1ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .auth-input input {
+    color: #e3f2fd;
+  }
+  
+  .auth-input label {
+    color: #bbdefb;
+  }
+  
+  .auth-input .MuiOutlinedInput-root {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+  }
+  
+  .auth-input .MuiOutlinedInput-root fieldset {
+    border-color: #90caf9;
+  }
+  
+  .auth-input .MuiOutlinedInput-root:hover fieldset {
+    border-color: #64b5f6;
+  }
+  
+  .auth-input .MuiOutlinedInput-root.Mui-focused fieldset {
+    border-color: #2196f3;
+  }
+  
+  .auth-toggle-group .MuiToggleButton-root {
+    flex: 1;
+    color: #e3f2fd;
+    background-color: rgba(255, 255, 255, 0.1); /* much lighter */
+    border: none !important;
+    font-weight: 500;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(6px);
+  }
+  
+  .auth-toggle-group .MuiToggleButton-root:hover {
+    background-color: rgba(144, 202, 249, 0.2);
+  }
+  
+  .auth-toggle-group .MuiToggleButton-root.Mui-selected {
+    background-color: rgba(144, 202, 249, 0.35);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 0 10px rgba(144, 202, 249, 0.4);
+  }
+  
