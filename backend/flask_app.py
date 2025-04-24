@@ -233,7 +233,7 @@ def compare_data_aggregated():
                 na_row["TotalDisasters"] = "N/A"
                 na_row["TotalDeaths"] = "N/A"
                 results.append(na_row)
-
+        print(results)
         return jsonify(results)
 
     except mysql.connector.Error as err:
