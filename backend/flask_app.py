@@ -171,6 +171,155 @@ def country_data():
     result = get_country_profile_data(country)
     return jsonify(result)
 
+
+# New function to get state-level data
+def get_state_profile_data(state):
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get state overview information
+        cursor.execute("SELECT * FROM State WHERE StateName = %s", (state,))
+        overview = cursor.fetchone()
+        
+        # Get economic growth data
+        cursor.execute("""
+            SELECT * FROM StateIndustryGrowth 
+            WHERE StateName = %s 
+            ORDER BY Year
+        """, (state,))
+        economic_growth = cursor.fetchall()
+        
+        # Get economic totals data
+        cursor.execute("""
+            SELECT * FROM StateEconomicTotals 
+            WHERE StateName = %s 
+            ORDER BY Year
+        """, (state,))
+        economic_totals = cursor.fetchall()
+        
+        # Get disasters data
+        cursor.execute("""
+            SELECT sd.* 
+            FROM StateDisasters sd
+            JOIN State s ON sd.StateCode = s.StateCode
+            WHERE s.StateName = %s
+            ORDER BY sd.Year DESC
+        """, (state,))
+        disasters = cursor.fetchall()
+        
+        return {
+            "overview": overview,
+            "economicGrowth": economic_growth,
+            "economicTotals": economic_totals,
+            "disasters": disasters
+        }
+
+    except mysql.connector.Error as err:
+        return {"error": str(err)}
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+# New endpoint for comparing states
+@app.route('/compare_states', methods=['POST'])
+def compare_states():
+    data = request.json
+    states = data.get('states')
+    start_year = data.get('startYear')
+    end_year = data.get('endYear')
+
+    if not all([states, start_year, end_year]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor(dictionary=True)
+
+        results = []
+        for state in states:
+            # Get economic totals aggregated data
+            cursor.execute("""
+                SELECT 
+                    StateName,
+                    AVG(GDPGrowth) as AvgGDPGrowth,
+                    AVG(PersonalIncomeGrowth) as AvgPersonalIncomeGrowth,
+                    MAX(GDP) as MaxGDP,
+                    MAX(PersonalIncome) as MaxPersonalIncome
+                FROM StateEconomicTotals
+                WHERE StateName = %s AND Year BETWEEN %s AND %s
+                GROUP BY StateName
+            """, (state, start_year, end_year))
+            
+            econ_totals = cursor.fetchone()
+            
+            # Get disaster count
+            cursor.execute("""
+                SELECT COUNT(*) as DisasterCount
+                FROM StateDisasters sd
+                JOIN State s ON sd.StateCode = s.StateCode
+                WHERE s.StateName = %s AND sd.Year BETWEEN %s AND %s
+            """, (state, start_year, end_year))
+            
+            disaster_count = cursor.fetchone()
+            
+            # Combine the data
+            if econ_totals:
+                state_data = econ_totals
+                if disaster_count:
+                    state_data['DisasterCount'] = disaster_count['DisasterCount']
+                results.append(state_data)
+        
+        return jsonify(results)
+
+    except mysql.connector.Error as err:
+        return jsonify({"error": str(err)}), 500
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
+
+# New endpoint for state data
+@app.route('/state_data', methods=['POST'])
+def state_data():
+    data = request.json
+    state = data.get('state')
+    if not state:
+        return jsonify({"error": "State is required"}), 400
+
+    result = get_state_profile_data(state)
+    return jsonify(result)
+
+# New endpoint to check if a country has state-level data
+@app.route('/check_state_data', methods=['POST'])
+def check_state_data():
+    data = request.json
+    country = data.get('country')
+    if not country:
+        return jsonify({"error": "Country is required"}), 400
+        
+    # Only US has state-level data for now
+    has_state_data = (country == "United States")
+    
+    return jsonify({"hasStateData": has_state_data})
+
 @app.route('/compare_data_aggregated', methods=['POST'])
 def compare_data_aggregated():
     data = request.json

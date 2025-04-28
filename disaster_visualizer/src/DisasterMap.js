@@ -34,7 +34,7 @@ export default function DisasterMap() {
   }, []);
 
   const handleCountryClick = (country) => {
-    navigate(`/country/${encodeURIComponent(country)}`);
+      navigate(`/country/${encodeURIComponent(country)}`);
   };
 
   const handleCompareClick = () => {

@@ -9,6 +9,7 @@ import {
   CartesianGrid, Tooltip as ChartTooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { useAuth } from './AuthContext.js';
+import UnitedStates from './UnitedStates';  // Import it
 
 export default function CountryProfile() {
   const { countryName } = useParams();
@@ -17,17 +18,27 @@ export default function CountryProfile() {
   const { token } = useAuth();
 
   useEffect(() => {
-    fetch('http://127.0.0.1:5000/country_data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ country: countryName })
-    })
-      .then(res => res.json())
-      .then(json => {
-        setData(json);
-        setLoading(false);
-      });
-  }, [countryName]);
+    if (countryName !== "United States of America") {
+      fetch('http://127.0.0.1:5000/country_data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ country: countryName })
+      })
+        .then(res => res.json())
+        .then(json => {
+          setData(json);
+          setLoading(false);
+        })
+        .catch(error => {
+          console.error('Failed to fetch country data:', error);
+          setLoading(false);
+        });
+    }
+  }, [countryName, token]);
+
+  if (countryName === "United States of America") {
+    return <UnitedStates />;
+  }
 
   if (loading) {
     return (
@@ -92,59 +103,58 @@ export default function CountryProfile() {
       )}
 
       {/* Disaster Frequency Line Chart */}
-        {timeline && timeline.length > 0 && (
+      {timeline && timeline.length > 0 && (
         <>
-            <Typography variant="h4" sx={{ mt: 6, mb: 2 }}>📈 Disaster Frequency Over Time</Typography>
-            <ResponsiveContainer width="100%" height={300}>
+          <Typography variant="h4" sx={{ mt: 6, mb: 2 }}>📈 Disaster Frequency Over Time</Typography>
+          <ResponsiveContainer width="100%" height={300}>
             <LineChart data={timeline}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="Year" />
-                <YAxis />
-                <ChartTooltip />
-                <Legend />
-                <Line type="monotone" dataKey="Earthquake" stroke="#ef5350" name="Earthquake" />
-                <Line type="monotone" dataKey="Tsunami" stroke="#42a5f5" name="Tsunami" />
-                <Line type="monotone" dataKey="Volcano" stroke="#ab47bc" name="Volcano" />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="Year" />
+              <YAxis />
+              <ChartTooltip />
+              <Legend />
+              <Line type="monotone" dataKey="Earthquake" stroke="#ef5350" name="Earthquake" />
+              <Line type="monotone" dataKey="Tsunami" stroke="#42a5f5" name="Tsunami" />
+              <Line type="monotone" dataKey="Volcano" stroke="#ab47bc" name="Volcano" />
             </LineChart>
-            </ResponsiveContainer>
+          </ResponsiveContainer>
         </>
-        )}
+      )}
 
-    {/* Disasters Table */}
-    {disasters && disasters.length > 0 && (
-    <>
-        <Typography variant="h4" sx={{ mt: 6, mb: 2 }}>🌪️ Disaster History</Typography>
-        <Paper sx={{ width: '100%', overflow: 'auto', backgroundColor: '#ffffff10' }}>
-        <Table>
-            <TableHead>
-            <TableRow>
-                <TableCell sx={{ color: 'white' }}>Type</TableCell>
-                <TableCell sx={{ color: 'white' }}>Year</TableCell>
-                <TableCell sx={{ color: 'white' }}>Intensity</TableCell>
-                <TableCell sx={{ color: 'white' }}>Total Damage</TableCell>
-                <TableCell sx={{ color: 'white' }}>Deaths</TableCell>
-                <TableCell sx={{ color: 'white' }}>Injuries</TableCell>
-            </TableRow>
-            </TableHead>
-            <TableBody>
-            {disasters.map((row, index) => (
-                <TableRow key={index}>
-                <TableCell sx={{ color: 'white' }}>{row.Type}</TableCell>
-                <TableCell sx={{ color: 'white' }}>{row.Year}</TableCell>
-                <TableCell sx={{ color: 'white' }}>{row.Intensity}</TableCell>
-                <TableCell sx={{ color: 'white' }}>
-                    {row.TotalDamage != null ? `${row.TotalDamage} (x${row.TotalDamageScale})` : 'N/A'}
-                </TableCell>
-                <TableCell sx={{ color: 'white' }}>{row.Deaths ?? 'N/A'}</TableCell>
-                <TableCell sx={{ color: 'white' }}>{row.Injuries ?? 'N/A'}</TableCell>
+      {/* Disasters Table */}
+      {disasters && disasters.length > 0 && (
+        <>
+          <Typography variant="h4" sx={{ mt: 6, mb: 2 }}>🌪️ Disaster History</Typography>
+          <Paper sx={{ width: '100%', overflow: 'auto', backgroundColor: '#ffffff10' }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ color: 'white' }}>Type</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Year</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Intensity</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Total Damage</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Deaths</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Injuries</TableCell>
                 </TableRow>
-            ))}
-            </TableBody>
-        </Table>
-        </Paper>
-    </>
-    )}
-
+              </TableHead>
+              <TableBody>
+                {disasters.map((row, index) => (
+                  <TableRow key={index}>
+                    <TableCell sx={{ color: 'white' }}>{row.Type}</TableCell>
+                    <TableCell sx={{ color: 'white' }}>{row.Year}</TableCell>
+                    <TableCell sx={{ color: 'white' }}>{row.Intensity}</TableCell>
+                    <TableCell sx={{ color: 'white' }}>
+                      {row.TotalDamage != null ? `${row.TotalDamage} (x${row.TotalDamageScale})` : 'N/A'}
+                    </TableCell>
+                    <TableCell sx={{ color: 'white' }}>{row.Deaths ?? 'N/A'}</TableCell>
+                    <TableCell sx={{ color: 'white' }}>{row.Injuries ?? 'N/A'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Paper>
+        </>
+      )}
     </Box>
   );
 }
