@@ -461,6 +461,47 @@ def saved_graphs(current_user):
             cursor.close()
             connection.close()
 
+@app.route('/update_graph_title', methods=['POST'])
+@token_required
+def update_graph_title(current_user):
+    data = request.get_json()
+    print("Received data for graph update:", data)  # Debugging
+
+    graph_id = data.get('graphId')
+    username = data.get('username')
+    new_graph_title = data.get('newGraphTitle')
+
+    if not all([graph_id, username, new_graph_title]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor()
+
+        query = '''
+            UPDATE SavedGraphs
+            SET GraphTitle = %s
+            WHERE GraphID = %s AND Username = %s
+        '''
+        cursor.execute(query, (new_graph_title, graph_id, username))
+        connection.commit()
+
+        return jsonify({'message': 'Graph title updated successfully'})
+
+    except mysql.connector.Error as err:
+        return jsonify({"error": str(err)}), 500
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
 
 @app.route('/delete_graph', methods=['POST'])
 def delete_graph():

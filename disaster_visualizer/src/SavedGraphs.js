@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Container, CircularProgress, Button, Card, CardContent, AppBar, Toolbar } from '@mui/material';
+import { Box, Typography, Container, CircularProgress, Button, Card, CardContent, AppBar, Toolbar, TextField } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 
 export default function SavedGraphsPage() {
   const [graphs, setGraphs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingGraphId, setEditingGraphId] = useState(null);  // Track which graph is being edited
+  const [newGraphTitle, setNewGraphTitle] = useState('');  // Track the new graph title
+
   const navigate = useNavigate();
   
   // Get the filters from location state
@@ -61,6 +64,63 @@ export default function SavedGraphsPage() {
       console.error('Invalid page for saved graph:', page);
     }
   }
+
+  const handleEditGraphTitle = (graphId, currentTitle) => {
+    setEditingGraphId(graphId);
+    setNewGraphTitle(currentTitle);  // Pre-fill the title for editing
+  };
+  
+  const handleSaveGraphTitle = async () => {
+    if (!newGraphTitle) {
+      console.error('Graph title cannot be empty');
+      return;
+    }
+  
+    try {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+  
+      if (!username) {
+        console.error('User not logged in.');
+        return;
+      }
+  
+      const response = await fetch('http://127.0.0.1:5000/update_graph_title', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          graphId: editingGraphId,
+          username,
+          newGraphTitle,
+        }),
+      });
+  
+      const data = await response.json();
+      if (response.ok) {
+        // Update the graph's title in the UI without modifying the delete logic
+        setGraphs((prevGraphs) =>
+          prevGraphs.map((graph) =>
+            graph.GraphID === editingGraphId
+              ? { ...graph, GraphTitle: newGraphTitle }
+              : graph
+          )
+        );
+        setEditingGraphId(null); // Stop editing mode
+        setNewGraphTitle('');
+        console.log(`Graph title updated to "${newGraphTitle}"`);
+        window.location.reload();
+
+      } else {
+        console.error('Failed to update graph title:', data.error || data.message);
+      }
+    } catch (error) {
+      console.error('Error updating graph title:', error);
+    }
+  };
+  
 
   const handleDeleteGraph = async (graphId) => {
     try {
@@ -147,7 +207,21 @@ export default function SavedGraphsPage() {
                 return (
                     <Card key={idx} sx={{ width: 300, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
                     <CardContent>
-                        <Typography variant="h6" sx={{ color: '#bbdefb', mb: 1 }}>{graph.GraphTitle}</Typography>
+                    <Typography variant="h6" sx={{ color: '#bbdefb', mb: 1 }}>
+                        {editingGraphId === graph.GraphId ? (
+                            <TextField
+                            value={newGraphTitle}
+                            onChange={(e) => setNewGraphTitle(e.target.value)}
+                            fullWidth
+                            variant="outlined"
+                            label="Edit Graph Title"
+                            sx={{ color: 'white', background: 'rgba(255,255,255,0.1)' }}
+                            />
+                        ) : (
+                            graph.GraphTitle
+                        )}
+                        </Typography>
+
                         <Typography variant="body2" sx={{ color: '#cfd8dc', mb: 2 }}>Page: {graph.Page}</Typography>
                         
                         {/* Show the filters saved with the graph */}
@@ -158,16 +232,34 @@ export default function SavedGraphsPage() {
                         <Button
                         variant="outlined"
                         onClick={() => navigateToGraph(graph.Page, filters)}
-                        sx={{ color: '#82b1ff', borderColor: '#82b1ff' }}
+                        sx={{ color: '#82b1ff', borderColor: '#82b1ff', margin:'5px'}}
                         >
                         Load Graph
                         </Button>
+
+                        {editingGraphId === graph.GraphId ? (
+                            <Button
+                                variant="contained"
+                                onClick={handleSaveGraphTitle}
+                                sx={{ backgroundColor: '#64b5f6', color: '#0d1b2a', fontWeight: 600, mt: 2, margin:'5px'}}
+                            >
+                                Save Title
+                            </Button>
+                            ) : (
+                            <Button
+                                variant="outlined"
+                                onClick={() => handleEditGraphTitle(graph.GraphId, graph.GraphTitle)}
+                                sx={{ color: '#82b1ff', borderColor: '#82b1ff', margin:'10px'}}
+                            >
+                                Edit Title
+                            </Button>
+                            )}
                         
                         {/* Delete Button */}
                         <Button
                         variant="outlined"
                         onClick={() => handleDeleteGraph(graph.GraphId)}  // Pass GraphID here
-                        sx={{ color: '#ef9a9a', borderColor: '#ef9a9a' }}
+                        sx={{ color: '#ef9a9a', borderColor: '#ef9a9a', margin:'5px'}}
                         >
                         Delete Graph
                         </Button>
