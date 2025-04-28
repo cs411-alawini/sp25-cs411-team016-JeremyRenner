@@ -128,6 +128,26 @@ export default function UnitedStates() {
           </Box>
         ) : (
           <Box sx={{ width: '100%', height: { xs: '50vh', md: '60vh' }, position: 'relative', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', background: 'rgba(8, 24, 40, 0.6)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', p: { xs: 1, md: 2 } }}>
+            {hoveredState && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  backgroundColor: 'rgba(8, 24, 40, 0.8)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(144, 202, 249, 0.4)',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  zIndex: 11,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                <Typography sx={{ fontWeight: 600, fontSize: '1.1rem', color: '#e3f2fd' }}>{hoveredState}</Typography>
+              </Box>
+            )}
+
             <Box sx={{ position: 'absolute', bottom: '20px', right: '20px', display: 'flex', flexDirection: 'column', gap: 1, zIndex: 10 }}>
               <Button onClick={handleZoomIn} variant="contained" sx={zoomButtonStyle}>+</Button>
               <Button onClick={handleZoomOut} variant="contained" sx={zoomButtonStyle}>-</Button>
@@ -165,8 +185,8 @@ export default function UnitedStates() {
                             pressed: {
                               fill: '#0d47a1',
                               stroke: '#ffffff',
-                              strokeWidth: 1
-                            }
+                              strokeWidth: 1,
+                            },
                           }}
                         />
                       );
