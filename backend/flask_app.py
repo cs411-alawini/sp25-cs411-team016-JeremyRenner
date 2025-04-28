@@ -5,6 +5,10 @@ from collections import defaultdict
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token
 from flask_jwt_extended import jwt_required, get_jwt_identity
+import json
+from functools import wraps
+
+
 
 
 app = Flask(__name__)
@@ -171,6 +175,155 @@ def country_data():
     result = get_country_profile_data(country)
     return jsonify(result)
 
+
+# New function to get state-level data
+def get_state_profile_data(state):
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get state overview information
+        cursor.execute("SELECT * FROM State WHERE StateName = %s", (state,))
+        overview = cursor.fetchone()
+        
+        # Get economic growth data
+        cursor.execute("""
+            SELECT * FROM StateIndustryGrowth 
+            WHERE StateName = %s 
+            ORDER BY Year
+        """, (state,))
+        economic_growth = cursor.fetchall()
+        
+        # Get economic totals data
+        cursor.execute("""
+            SELECT * FROM StateEconomicTotals 
+            WHERE StateName = %s 
+            ORDER BY Year
+        """, (state,))
+        economic_totals = cursor.fetchall()
+        
+        # Get disasters data
+        cursor.execute("""
+            SELECT sd.* 
+            FROM StateDisasters sd
+            JOIN State s ON sd.StateCode = s.StateCode
+            WHERE s.StateName = %s
+            ORDER BY sd.Year DESC
+        """, (state,))
+        disasters = cursor.fetchall()
+        
+        return {
+            "overview": overview,
+            "economicGrowth": economic_growth,
+            "economicTotals": economic_totals,
+            "disasters": disasters
+        }
+
+    except mysql.connector.Error as err:
+        return {"error": str(err)}
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+# New endpoint for comparing states
+@app.route('/compare_states', methods=['POST'])
+def compare_states():
+    data = request.json
+    states = data.get('states')
+    start_year = data.get('startYear')
+    end_year = data.get('endYear')
+
+    if not all([states, start_year, end_year]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor(dictionary=True)
+
+        results = []
+        for state in states:
+            # Get economic totals aggregated data
+            cursor.execute("""
+                SELECT 
+                    StateName,
+                    AVG(GDPGrowth) as AvgGDPGrowth,
+                    AVG(PersonalIncomeGrowth) as AvgPersonalIncomeGrowth,
+                    MAX(GDP) as MaxGDP,
+                    MAX(PersonalIncome) as MaxPersonalIncome
+                FROM StateEconomicTotals
+                WHERE StateName = %s AND Year BETWEEN %s AND %s
+                GROUP BY StateName
+            """, (state, start_year, end_year))
+            
+            econ_totals = cursor.fetchone()
+            
+            # Get disaster count
+            cursor.execute("""
+                SELECT COUNT(*) as DisasterCount
+                FROM StateDisasters sd
+                JOIN State s ON sd.StateCode = s.StateCode
+                WHERE s.StateName = %s AND sd.Year BETWEEN %s AND %s
+            """, (state, start_year, end_year))
+            
+            disaster_count = cursor.fetchone()
+            
+            # Combine the data
+            if econ_totals:
+                state_data = econ_totals
+                if disaster_count:
+                    state_data['DisasterCount'] = disaster_count['DisasterCount']
+                results.append(state_data)
+        
+        return jsonify(results)
+
+    except mysql.connector.Error as err:
+        return jsonify({"error": str(err)}), 500
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
+
+# New endpoint for state data
+@app.route('/state_data', methods=['POST'])
+def state_data():
+    data = request.json
+    state = data.get('state')
+    if not state:
+        return jsonify({"error": "State is required"}), 400
+
+    result = get_state_profile_data(state)
+    return jsonify(result)
+
+# New endpoint to check if a country has state-level data
+@app.route('/check_state_data', methods=['POST'])
+def check_state_data():
+    data = request.json
+    country = data.get('country')
+    if not country:
+        return jsonify({"error": "Country is required"}), 400
+        
+    # Only US has state-level data for now
+    has_state_data = (country == "United States")
+    
+    return jsonify({"hasStateData": has_state_data})
+
 @app.route('/compare_data_aggregated', methods=['POST'])
 def compare_data_aggregated():
     data = request.json
@@ -244,6 +397,295 @@ def compare_data_aggregated():
             cursor.close()
             connection.close()
 
+
+@app.route('/global_stats', methods=['POST'])
+def global_stats():
+    data = request.get_json()
+    start_year = data.get('startYear')
+    end_year = data.get('endYear')
+    disaster_types = data.get('disasterTypes', [])
+    indicators = data.get('indicators', [])
+    aggregate_by = data.get('aggregateBy', 'Disaster Types')
+    sort_option = data.get('sortOption', 'Year (Ascending)')
+
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor(dictionary=True)
+
+        # Build select and group-by based on aggregation choice
+        if aggregate_by == 'Disaster Types':
+            select_clause = "nd.Type AS DisasterType, nd.Year,"
+            group_clause = "GROUP BY nd.Type, nd.Year"
+        else:  # Individual Disasters
+            select_clause = "nd.DisasterID, nd.Type AS DisasterType, nd.Year,"
+            group_clause = "GROUP BY nd.DisasterID, nd.Type, nd.Year"
+
+        # Build indicator selects
+        indicator_selects = []
+        for ind in indicators:
+            if ind == 'AvgGDP':
+                indicator_selects.append("AVG(ne.GDPAnnualPercentGrowth) AS AvgGDP")
+            elif ind == 'AvgCPI':
+                indicator_selects.append("AVG(ne.CPI_2010_100) AS AvgCPI")
+            elif ind == 'AvgExportGrowth':
+                indicator_selects.append("AVG(ne.ExportsAnnualPercentGrowth) AS AvgExportGrowth")
+            elif ind == 'AvgImportGrowth':
+                indicator_selects.append("AVG(ne.ImportAnnualPercentGrowth) AS AvgImportGrowth")
+            elif ind == 'AvgUnemployment':
+                indicator_selects.append("AVG(ne.UnemploymentPercent) AS AvgUnemployment")
+            elif ind == 'AvgAgrictultureGrowth':
+                indicator_selects.append("AVG(se.AgricultureAnnualPercentGrowth) AS AvgAgrictultureGrowth")
+            elif ind == 'AvgIndustryGrowth':
+                indicator_selects.append("AVG(se.IndustryAnnualPercentGrowth) AS AvgIndustryGrowth")
+            elif ind == 'AvgManufacturingGrowth':
+                indicator_selects.append("AVG(se.ManufacturingAnnualPercentGrowth) AS AvgManufacturingGrowth")
+            elif ind == 'AvgServiceGrowth':
+                indicator_selects.append("AVG(se.ServiceAnnualPercentGrowth) AS AvgServiceGrowth")
+
+        indicator_select_sql = ", ".join(indicator_selects)
+
+        # Build the full SQL
+        sql = f'''
+            SELECT {select_clause} {indicator_select_sql}
+            FROM NaturalDisaster nd
+            LEFT JOIN DirectDamage dd ON nd.DisasterID = dd.DisasterID
+            LEFT JOIN NationalEconomicImpact ne ON nd.CountryName = ne.CountryName AND nd.Year = ne.Year
+            LEFT JOIN SectoralEconomicImpact se ON nd.CountryName = se.CountryName AND nd.Year = se.Year
+            WHERE nd.Year BETWEEN %s AND %s
+        '''
+
+        params = [start_year, end_year]
+
+        if disaster_types:
+            placeholders = ','.join(['%s'] * len(disaster_types))
+            sql += f' AND nd.Type IN ({placeholders})'
+            params.extend(disaster_types)
+
+        sql += f' {group_clause} '
+
+        # Apply sort
+        if sort_option == 'Year (Ascending)':
+            sql += 'ORDER BY nd.Year ASC'
+        elif sort_option == 'Year (Descending)':
+            sql += 'ORDER BY nd.Year DESC'
+        elif sort_option == 'Indicator (Ascending)' and indicators:
+            sql += f'ORDER BY {indicators[0]} ASC'
+        elif sort_option == 'Indicator (Descending)' and indicators:
+            sql += f'ORDER BY {indicators[0]} DESC'
+
+        cursor.execute(sql, params)
+        result = cursor.fetchall()
+
+        # Filter rows that have at least one non-null indicator value
+        filtered_result = []
+        for row in result:
+            indicators_non_null = any(row.get(ind.split(' AS ')[-1]) is not None for ind in indicators)
+            if indicators_non_null:
+                filtered_result.append(row)
+
+        return jsonify(filtered_result)
+
+    except mysql.connector.Error as err:
+        return jsonify({'error': str(err)}), 500
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
+def get_db_connection():
+    return mysql.connector.connect(
+        host='34.133.249.35',
+        port=3306,
+        user='aaruldhawan',
+        password='scarjoe',
+        database='test_databoose'
+    )
+
+@app.route('/save_graph', methods=['POST'])
+def save_graph():
+    data = request.get_json()
+    print("Received data in /save_graph:", data)  # <-- NEW DEBUG PRINT
+
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    username = data.get('username')
+    graph_title = data.get('graph_title')
+    filters = data.get('filters')
+    page = data.get('page')
+
+    if not all([username, graph_title, filters, page]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor()
+
+        query = '''
+            INSERT INTO SavedGraphs (Username, GraphTitle, Filters, Page)
+            VALUES (%s, %s, %s, %s)
+        '''
+        graph_id = cursor.lastrowid
+        cursor.execute(query, (username, graph_title, json.dumps(filters), page))
+        graph_id = cursor.lastrowid
+        connection.commit()
+
+        return jsonify({"message": "Graph saved successfully!", "graphId": graph_id})
+
+    except mysql.connector.Error as err:
+        print("Database error:", err)  # <-- NEW DEBUG PRINT
+        return jsonify({"error": str(err)}), 500
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        for header, value in request.headers.items():
+            print(f"{header}: {value}")
+        
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization'].split(' ')[1]
+
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+
+        try:
+            username = request.headers.get('Username')
+            if not username:
+                username = 'snehas6'  # TEMPORARY fallback for now
+        except Exception as e:
+            return jsonify({'message': 'Token is invalid!'}), 401
+
+        return f(username, *args, **kwargs)
+
+    return decorated
+
+@app.route('/saved_graphs', methods=['GET'])
+@token_required
+def saved_graphs(current_user):
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor(dictionary=True)
+
+        query = '''
+        SELECT GraphId, GraphTitle, Page, Filters
+        FROM SavedGraphs
+        WHERE Username = %s
+        '''
+        cursor.execute(query, (current_user,))
+        graphs = cursor.fetchall()
+
+        print("Fetched graphs:", graphs)
+        return jsonify(graphs)
+
+    except mysql.connector.Error as err:
+        return jsonify({'error': str(err)}), 500
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+@app.route('/update_graph_title', methods=['POST'])
+@token_required
+def update_graph_title(current_user):
+    data = request.get_json()
+    print("Received data for graph update:", data)  # Debugging
+
+    graph_id = data.get('graphId')
+    username = data.get('username')
+    new_graph_title = data.get('newGraphTitle')
+
+    if not all([graph_id, username, new_graph_title]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    try:
+        connection = mysql.connector.connect(
+            host='34.133.249.35',
+            port=3306,
+            user='aaruldhawan',
+            password='scarjoe',
+            database='test_databoose'
+        )
+        cursor = connection.cursor()
+
+        query = '''
+            UPDATE SavedGraphs
+            SET GraphTitle = %s
+            WHERE GraphID = %s AND Username = %s
+        '''
+        cursor.execute(query, (new_graph_title, graph_id, username))
+        connection.commit()
+
+        return jsonify({'message': 'Graph title updated successfully'})
+
+    except mysql.connector.Error as err:
+        return jsonify({"error": str(err)}), 500
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
+@app.route('/delete_graph', methods=['POST'])
+def delete_graph():
+    data = request.get_json()
+    graph_id = data.get('graphId')  # Use GraphID to identify the graph
+    username = data.get('username')
+
+    if not all([graph_id, username]):
+        print(f"Error: Missing graphId or username. Received data: {data}")
+        return jsonify({'error': 'Graph ID and username required'}), 400
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            DELETE FROM SavedGraphs
+            WHERE GraphID = %s AND Username = %s
+        """, (graph_id, username))
+
+        connection.commit()
+
+        if cursor.rowcount == 0:
+            return jsonify({'error': 'No matching graph found'}), 404
+
+        return jsonify({'message': 'Graph deleted successfully'})
+
+    except mysql.connector.Error as err:
+        return jsonify({'error': str(err)}), 500
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
 
 
 
