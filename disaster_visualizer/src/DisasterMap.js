@@ -40,8 +40,8 @@ export default function DisasterMap() {
       navigate(`/country/${encodeURIComponent(country)}`);
   };
 
-  const handleCompareClick = () => {
-    navigate(`/compare`);
+  const handleUSClick = () => {
+    navigate(`/country/United%20States%20of%20America`);
   };
 
   const handleZoomIn = () => {
@@ -183,9 +183,6 @@ export default function DisasterMap() {
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button onClick={() => navigate('/')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
               Home
-            </Button>
-            <Button onClick={() => navigate('/compare')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
-              Compare
             </Button>
             <Button onClick={() => navigate('/saved')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
               Saved Graphs
@@ -815,13 +812,13 @@ export default function DisasterMap() {
             '&:hover': { transform: 'translateY(-5px)' },
             cursor: 'pointer'
           }}
-          onClick={handleCompareClick}
+          onClick={handleUSClick}
           >
             <Typography variant="h4" sx={{ fontSize: '2rem', color: '#82b1ff', mb: 2 }}>
-              Compare Countries
+              50 States
             </Typography>
             <Typography sx={{ color: '#e3f2fd', fontWeight: 300 }}>
-              View Distaster and Economic data between the countries
+              View Individual State Disaster Data
             </Typography>
           </Box>
         </Box>
