@@ -410,7 +410,9 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
-
+        for header, value in request.headers.items():
+            print(f"{header}: {value}")
+        
         if 'Authorization' in request.headers:
             token = request.headers['Authorization'].split(' ')[1]
 
@@ -420,7 +422,6 @@ def token_required(f):
         try:
             username = request.headers.get('Username')
             if not username:
-                # If Username is not passed separately, you could decode the token here
                 username = 'snehas6'  # TEMPORARY fallback for now
         except Exception as e:
             return jsonify({'message': 'Token is invalid!'}), 401

@@ -25,10 +25,12 @@ export default function SavedGraphsPage() {
     const fetchSavedGraphs = async () => {
       try {
         const token = localStorage.getItem('token');
+        const username = localStorage.getItem('username');
         const response = await fetch('http://127.0.0.1:5000/saved_graphs', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,  // <<< THIS IS IMPORTANT
+            'Authorization': `Bearer ${token}`,
+            'Username': `${username}`
           },
         });
         const data = await response.json();
