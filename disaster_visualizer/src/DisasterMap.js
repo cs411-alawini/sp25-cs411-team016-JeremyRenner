@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Box, Container, CircularProgress, Button, AppBar, Toolbar } from '@mui/material';
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { TextField, Autocomplete } from '@mui/material';
+import SaveGraphButton from './SaveGraphButton';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 export default function DisasterMap() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const filters = location.state?.filters || {};
   const [loading, setLoading] = useState(true);
   const [position, setPosition] = useState({ coordinates: [0, 20], zoom: 1 });
   const [highlightedCountries, setHighlightedCountries] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
-  const [startYear, setStartYear] = useState('');
-  const [endYear, setEndYear] = useState('');
-  const [selectedDisasters, setSelectedDisasters] = useState([]);
-  const [selectedIndicators, setSelectedIndicators] = useState([]);
+  const [startYear, setStartYear] = useState(filters.startYear || '');  // Default to '' if not provided
+  const [endYear, setEndYear] = useState(filters.endYear || '');  // Default to '' if not provided
+  const [selectedDisasters, setSelectedDisasters] = useState(filters.selectedDisasters || []);  // Default to empty array
+  const [selectedIndicators, setSelectedIndicators] = useState(filters.selectedIndicators || []);  // Default to empty array
   const [filteredDataByCountry, setFilteredDataByCountry] = useState({});
-  const [selectedCountries, setSelectedCountries] = useState([]);
+  const [selectedCountries, setSelectedCountries] = useState(filters.selectedCountries || []);  // Default to empty array
   const [selectedCountryInfo, setSelectedCountryInfo] = useState(null);
 
   useEffect(() => {
@@ -147,6 +150,7 @@ export default function DisasterMap() {
         alignItems: 'center',
         px: { xs: 2, md: 4 },
         pt: '100px',
+        pb:'40px',
         gap: 4,
         position: 'relative',
         overflow: 'hidden'
@@ -177,6 +181,9 @@ export default function DisasterMap() {
 
           {/* Right: Navigation Buttons */}
           <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button onClick={() => navigate('/')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
+              Home
+            </Button>
             <Button onClick={() => navigate('/compare')} variant="outlined" sx={{ color: '#bbdefb', borderColor: '#64b5f6' }}>
               Compare
             </Button>
@@ -712,6 +719,20 @@ export default function DisasterMap() {
             </ComposableMap>
           </Box>
         )}
+
+        <Box sx={{ display: 'flex', justifyContent: 'right'}}>
+          <SaveGraphButton
+            graphTitle="Global Disaster Impact"
+            filters={{
+              startYear,
+              endYear,
+              selectedDisasters,
+              selectedIndicators,
+              selectedCountries
+            }}
+            page="DisasterMap"
+          />
+        </Box>
 
         <Box sx={{ 
           mt: 4, 

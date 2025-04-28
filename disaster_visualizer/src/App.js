@@ -6,8 +6,8 @@ import CountryComparison from './CountryComparison';
 import AuthForm from './Auth';
 import PrivateRoute from './PrivateRoute';
 import StateProfile from './StateProfile';
-
-
+import GlobalStats from './GlobalStats';
+import SavedGraphs from './SavedGraphs';
 
 
 function App() {
@@ -19,6 +19,8 @@ function App() {
         <Route path="/country/:countryName" element={<PrivateRoute><CountryProfile /></PrivateRoute>} />
         <Route path="/state/:stateName" element={<PrivateRoute><StateProfile /></PrivateRoute>} />
         <Route path="/compare" element={<PrivateRoute><CountryComparison /></PrivateRoute>} />
+        <Route path="/global" element={<PrivateRoute><GlobalStats /></PrivateRoute>} />
+        <Route path="/saved" element={<PrivateRoute><SavedGraphs /></PrivateRoute>} />
       </Routes>
     </Router>
   );
