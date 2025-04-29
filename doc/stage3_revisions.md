@@ -1,0 +1,1 @@
+In the original submission for Stage 3, we had only included one index per query. To revise, we have now included three indices per query, including a rationale as to why or why not the indices worked.
